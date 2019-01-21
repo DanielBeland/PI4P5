@@ -103,7 +103,7 @@ class PolyleptiqueApp(tk.Tk):
         
         self.frames= {}
         
-        for F in (StartPage, PageOne, PageTwo, PageThree):
+        for F in (StartPage, PageOne, PageTwo):
         
             frame = F(container, self)
             
@@ -186,45 +186,43 @@ class PageTwo(tk.Frame):
             if MsgBox=='yes':
                 self.canvas.get_tk_widget().destroy()
                 setup_data=loadData(self)
-                self.canvas = FigureCanvasTkAgg(setup_data, self)
-                self.canvas.draw()
-                toolbar = NavigationToolbar2Tk(self.canvas, self)
-                toolbar.update()
-                self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-                self.canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+                self.canvas_load = FigureCanvasTkAgg(setup_data, self)
+                self.canvas_load.draw()
+                self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+                self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
             else:
                 pass
         else:
             setup_data=loadData(self)
-            self.canvas = FigureCanvasTkAgg(setup_data, self)
-            self.canvas.draw()
+            self.canvas_load = FigureCanvasTkAgg(setup_data, self)
+            self.canvas_load.draw()
             toolbar = NavigationToolbar2Tk(self.canvas, self)
             toolbar.update()
-            self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-            self.canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+            self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+            self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
         
-class PageThree(tk.Frame):
-    def __init__(self,parent,controller):
-        tk.Frame.__init__(self,parent)
-        label=ttk.Label(self,text="Graph Page",font=LARGE_FONT)
-        
-        label.pack(pady=10,padx=10)
-        
-        button1=ttk.Button(self, text="Back To home",
-                          command=lambda: controller.show_frame(StartPage))
-        
-        button1.pack()
-
-        canvas = FigureCanvasTkAgg(fig, self)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-        
-        toolbar = NavigationToolbar2Tk(canvas, self)
-        toolbar.update()
-        canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-        
-    def event(self):
-        pass
+#class PageThree(tk.Frame):
+#    def __init__(self,parent,controller):
+#        tk.Frame.__init__(self,parent)
+#        label=ttk.Label(self,text="Graph Page",font=LARGE_FONT)
+#        
+#        label.pack(pady=10,padx=10)
+#        
+#        button1=ttk.Button(self, text="Back To home",
+#                          command=lambda: controller.show_frame(StartPage))
+#        
+#        button1.pack()
+#
+#        canvas = FigureCanvasTkAgg(fig, self)
+#        canvas.draw()
+#        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+#        
+#        toolbar = NavigationToolbar2Tk(canvas, self)
+#        toolbar.update()
+#        canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+#        
+#    def event(self):
+#        pass
 def updateVal():
     return np.random.randint(100,size=(1,nb), dtype=int)
 def select_file():
@@ -258,7 +256,10 @@ def update_ax(spos,data,fig_load,ax):
 
     spos.on_changed(update)
         
+    
+    
+    
 a=setupP(nb,fig)      
 app=PolyleptiqueApp()
-ani=animation.FuncAnimation(fig, animate,fargs=(val,a[0],a[1],a[2],a[3],a[4]), interval=1000)
+ani=animation.FuncAnimation(fig, animate,fargs=(val,a[0],a[1],a[2],a[3],a[4]), interval=1000, blit=True)
 app.mainloop()
