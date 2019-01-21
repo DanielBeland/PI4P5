@@ -4,6 +4,12 @@ Created on Wed Jan 16 14:42:00 2019
 
 @author: Olivier
 """
+import random
+import time
+import serial
+import sys
+import datetime as dt
+
 import matplotlib
 #matplotlib.use("TkAgg")
 
@@ -13,59 +19,133 @@ import matplotlib.animation as animation
 from matplotlib import style
 import numpy as np
 import matplotlib.pyplot as plt
-import threading
+
+from queue import Queue, Empty, Full
+from threading import Thread, Lock, current_thread
+
 from collections import deque
 from tkinter import filedialog
 from matplotlib.widgets import Slider
 
-
 import tkinter as tk
 from tkinter import ttk
+
+from Save_values import *
+from real_time_plot import *
+from threadStart import tStart
+
 global load
+global latest_data_point
+global stopSignal
+
 file_path=[]
 LARGE_FONT=("Verdana",12)
 style.use("ggplot")
 fig = Figure(figsize=(5,5), dpi=100)
-nb=11
-val= np.random.randint(100,size=(1,nb), dtype=int)
+nbChannel=11
+frameCounter = 1
+timeToDisplay = 1000 
+#val= np.random.randint(1000,size=(1,nbChannel), dtype=int)
 load=False
     
-    
-def setupP(n,fig):
+def worker_acquisition(q_raw,nbChannel):
+    t = current_thread()
+    ser = serial.Serial()
+    ser.baudrate = 9600
+    ser.timeout = 2
+#    while True:
+#        port='COM11'
+#        ser.port = port
+#        ser.open()
+#        break
+#    data=np.zeros((nbChannel), dtype=int)
+    while getattr(t, "do_run", True):
+        # Acquire
+        data=np.zeros((nbChannel), dtype=int)
+#        data = np.random.randint(100,size=(11), dtype=int)
+        # Delay to emulate the Bluetooth API call
+#        dataRaw=ser.readline().split(b',')
+#        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
+        data = np.random.randint(1000,size=(11), dtype=int)
+        time.sleep(0.01)
+        # Enqueue
+        q_raw.put(data)
 
+
+def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
+    global latest_data_point
+    t = current_thread()
+    firstTime=True
+    while getattr(t, "do_run", True):
+        try:
+            # Dequeue raw
+            data = q_raw.get(block=False)
+            q_raw.task_done() #necessary for multithreaded operations on Queue
+        except Empty:
+            if firstTime:
+                latest_data_point = np.zeros((nbChannel), dtype=int)
+                firstTime=False
+            # Reenter the loop if raw queue is empty, maybe sleep to let it some time to fill
+            # time.sleep(0.1)
+            continue
+        # Integrity check and correction
+        if  not data.shape[0]==nbChannel:
+            data = np.zeros(nbChannel, dtype=int)
+        else:
+            for x in range(data.shape[0]):
+                if (data[x] < 0 or not isinstance(data[x], np.int32)):
+                    data[x] = 0
+        if lock.acquire(blocking=False): # If lock is taken don't block just pass
+            latest_data_point = data
+#            print(latest_data_point)
+            lock.release()
+        # Enqueue processed
+
+        q_processed.put(data)
     
-    xs = np.linspace(1,10,10)
+def worker_write_to_file(q_processed,nbChannel):
+    setup('data.csv')
+    t = current_thread()
+    while getattr(t, "do_run", True): 
+        time.sleep(10)
+        curr_size = q_processed.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
+#        print(curr_size)
+        if curr_size > 1000:
+            data=np.zeros((curr_size,nbChannel), dtype=int)
+            for i in range(curr_size):
+                data[i] = q_processed.get()
+                q_processed.task_done()
+            write(data,'data.csv')
+
+def setupP(n,fig,ttd):
+    global latest_data_point
+    latest_data_point = np.zeros(n, dtype=int)
+    xs = np.linspace(1,10,ttd)
     ax=[None]*n
     ys=[None]*n
     line=[None]*n
     for k in range(n):
         ax[k] = fig.add_subplot(n, 1, k+1)
-        ax[k].set_ylim(0, 100)
-        ys[k] = deque([0]*10)
+        ax[k].set_ylim(0, 1023) #Changer pour chaque capteur
+        ys[k] = deque([0]*ttd)
         
         linek, = ax[k].plot(xs, ys[k])
         line[k]=linek
     return [ax, xs, ys,line,n]
 
-def animate(i,val,ax,xs,ys,lines,n):
-    val=updateVal()
+def animate(frameCounter,val,ax,xs,ys,lines,n):
 
-    # Limit x and y lists to 20 items
     for l in range(n):
         
         ys[l].popleft()
-        ys[l].append(val[0][l])
-        
-    
-        # Draw x and y lists
-#        ax[l].clear()
-#        ax[l].plot(xs, ys[l])
+        ys[l].append(latest_data_point[l])
+
         lines[l].set_xdata(xs)
         lines[l].set_ydata(ys[l])
 
     # Format plot
-    plt.xticks(rotation=45, ha='right')
-    plt.subplots_adjust(bottom=0.30)
+#    plt.xticks(rotation=45, ha='right')
+#    plt.subplots_adjust(bottom=0.30)
     return lines
 # Set up plot to call animate() function periodically
     
@@ -94,7 +174,7 @@ class PolyleptiqueApp(tk.Tk):
         
         tk.Tk.__init__(self,*args,**kwargs)
         
-        tk.Tk.iconbitmap(self,default="logo.ico")
+#        tk.Tk.iconbitmap(self,default="logo.ico")
         tk.Tk.wm_title(self, "Polyleptique")
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
@@ -161,7 +241,7 @@ class PageOne(tk.Frame):
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
     def event(self):
-        pass
+         pass
         
         
 class PageTwo(tk.Frame):
@@ -223,8 +303,8 @@ class PageTwo(tk.Frame):
 #        
 #    def event(self):
 #        pass
-def updateVal():
-    return np.random.randint(100,size=(1,nb), dtype=int)
+#def updateVal():
+#    return np.random.randint(1000,size=(1,nbChannel), dtype=int)
 def select_file():
     root = tk.Tk()
     root.withdraw()
@@ -259,7 +339,29 @@ def update_ax(spos,data,fig_load,ax):
     
     
     
-a=setupP(nb,fig)      
+a=setupP(nbChannel,fig,timeToDisplay)      
 app=PolyleptiqueApp()
-ani=animation.FuncAnimation(fig, animate,fargs=(val,a[0],a[1],a[2],a[3],a[4]), interval=1000, blit=True)
+ani=animation.FuncAnimation(fig, animate,fargs=(val,a[0],a[1],a[2],a[3],a[4]), interval=1, blit=True)
+
+# Initialize the Queue's
+q_raw = Queue(10000)
+q_processed = Queue(10000)
+
+# Data acquisition worker
+t_acq = Thread(target=worker_acquisition, args=(q_raw,nbChannel,), name="Acquisition")
+tStart(t_acq)
+
+# Integrity check worker[s]
+# If integrity check is long, add more workers
+num_intergrity_workers = 3
+threads_integrity = []
+latest_data_point_lock = Lock()
+for i in range(num_intergrity_workers):
+    t_i = Thread(target=worker_integrity_check, args=(q_raw, q_processed, latest_data_point_lock,nbChannel,), name="Integrity-{}".format(i))
+    threads_integrity.append(t_i)
+    tStart(t_i)
+
+t_save = Thread(target=worker_write_to_file, args=(q_processed,nbChannel,), name="Writer")
+tStart(t_save)
+
 app.mainloop()
