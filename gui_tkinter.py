@@ -29,6 +29,7 @@ from matplotlib.widgets import Slider
 
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 
 from Save_values import *
 from real_time_plot import *
@@ -199,6 +200,11 @@ class PolyleptiqueApp(tk.Tk):
         frame.tkraise()
         frame.event()
         
+#    def on_exit(self):
+#        """When you click to exit, this function is called"""
+#        if messagebox.askyesno("Exit", "Do you want to quit the application?"):
+#            self.destroy()
+        
         
 
 class StartPage(tk.Frame):
@@ -336,11 +342,13 @@ def update_ax(spos,data,fig_load,ax):
 
     spos.on_changed(update)
         
-    
+def on_closing():
+    if messagebox.askokcancel("Quit", "Do you want to quit?"):
+        root.destroy()    
     
     
 a=setupP(nbChannel,fig,timeToDisplay)      
-app=PolyleptiqueApp()
+root=PolyleptiqueApp()
 ani=animation.FuncAnimation(fig, animate,fargs=(val,a[0],a[1],a[2],a[3],a[4]), interval=1, blit=True)
 
 # Initialize the Queue's
@@ -364,4 +372,5 @@ for i in range(num_intergrity_workers):
 t_save = Thread(target=worker_write_to_file, args=(q_processed,nbChannel,), name="Writer")
 tStart(t_save)
 
-app.mainloop()
+root.protocol("WM_DELETE_WINDOW", on_closing)
+root.mainloop()
