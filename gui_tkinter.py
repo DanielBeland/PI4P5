@@ -139,6 +139,12 @@ def worker_write_to_file(q_processed,nbChannel):
                 data[i] = q_processed.get()
                 q_processed.task_done()
             write(data,'data.csv')
+    curr_size = q_processed.qsize()
+    data=np.zeros((curr_size,nbChannel), dtype=int)
+    for i in range(curr_size):
+        data[i] = q_processed.get()
+        q_processed.task_done()
+    write(data,'data.csv')
 
 
 def setupP(n,fig,ttd):
@@ -405,7 +411,7 @@ ani=animation.FuncAnimation(fig, animate,fargs=(a[0],a[1],a[2],a[3],a[4]), inter
 #tStart(gui)
 
 root.mainloop()
-enumerate()
+
 for th in thread_list:
     th.shutdown_flag.set()
     th.join()
