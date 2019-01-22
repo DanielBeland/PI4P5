@@ -48,6 +48,25 @@ frameCounter = 1
 timeToDisplay = 1000 
 #val= np.random.randint(1000,size=(1,nbChannel), dtype=int)
 load=False
+
+class StopableThread(threading.Thread):
+ 
+    def __init__(self, level=None, *args, **kwargs):
+        super(StopableThread, self).__init__(*args, **kwargs)
+ 
+        # The shutdown_flag is a threading.Event object that
+        # indicates whether the thread should be terminated.
+        self.shutdown_flag = threading.Event()
+ 
+        # ... Other thread setup code here ...
+ 
+    def run(self):
+        print('Thread #%s started' % self.ident)
+ 
+        self._target(*self._args, **self._kwargs)
+ 
+        # ... Clean shutdown code here ...
+        print('Thread #%s stopped' % self.ident)
     
 def worker_acquisition(q_raw,nbChannel):
     t = current_thread()
@@ -60,7 +79,7 @@ def worker_acquisition(q_raw,nbChannel):
 #        ser.open()
 #        break
 #    data=np.zeros((nbChannel), dtype=int)
-    while getattr(t, "do_run", True):
+    while not t.shutdown_flag.is_set():
         # Acquire
         data=np.zeros((nbChannel), dtype=int)
 #        data = np.random.randint(100,size=(11), dtype=int)
@@ -68,6 +87,7 @@ def worker_acquisition(q_raw,nbChannel):
 #        dataRaw=ser.readline().split(b',')
 #        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
         data = np.random.randint(1000,size=(11), dtype=int)
+        print(data)
         time.sleep(0.01)
         # Enqueue
         q_raw.put(data)
@@ -77,7 +97,7 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
     global latest_data_point
     t = current_thread()
     firstTime=True
-    while getattr(t, "do_run", True):
+    while not t.shutdown_flag.is_set():
         try:
             # Dequeue raw
             data = q_raw.get(block=False)
@@ -103,11 +123,13 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
         # Enqueue processed
 
         q_processed.put(data)
-    
+        
+
+
 def worker_write_to_file(q_processed,nbChannel):
     setup('data.csv')
     t = current_thread()
-    while getattr(t, "do_run", True): 
+    while not t.shutdown_flag.is_set(): 
         time.sleep(10)
         curr_size = q_processed.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
 #        print(curr_size)
@@ -117,6 +139,7 @@ def worker_write_to_file(q_processed,nbChannel):
                 data[i] = q_processed.get()
                 q_processed.task_done()
             write(data,'data.csv')
+
 
 def setupP(n,fig,ttd):
     global latest_data_point
@@ -134,7 +157,7 @@ def setupP(n,fig,ttd):
         line[k]=linek
     return [ax, xs, ys,line,n]
 
-def animate(frameCounter,val,ax,xs,ys,lines,n):
+def animate(frameCounter,ax,xs,ys,lines,n):
 
     for l in range(n):
         
@@ -247,8 +270,7 @@ class PageOne(tk.Frame):
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
     def event(self):
-         pass
-        
+        pass
         
 class PageTwo(tk.Frame):
     def __init__(self,parent,controller):
@@ -341,36 +363,50 @@ def update_ax(spos,data,fig_load,ax):
             fig_load.canvas.draw_idle()
 
     spos.on_changed(update)
+
         
 def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
-        root.destroy()    
-    
-    
-a=setupP(nbChannel,fig,timeToDisplay)      
-root=PolyleptiqueApp()
-ani=animation.FuncAnimation(fig, animate,fargs=(val,a[0],a[1],a[2],a[3],a[4]), interval=1, blit=True)
-
+        root.destroy()   
+             
 # Initialize the Queue's
 q_raw = Queue(10000)
 q_processed = Queue(10000)
-
+thread_list=[]
 # Data acquisition worker
-t_acq = Thread(target=worker_acquisition, args=(q_raw,nbChannel,), name="Acquisition")
-tStart(t_acq)
-
+t_acq = StopableThread(target=worker_acquisition, args=(q_raw,nbChannel,), name="Acquisition")
+t_acq.start()
+thread_list.append(t_acq)
 # Integrity check worker[s]
 # If integrity check is long, add more workers
 num_intergrity_workers = 3
 threads_integrity = []
 latest_data_point_lock = Lock()
 for i in range(num_intergrity_workers):
-    t_i = Thread(target=worker_integrity_check, args=(q_raw, q_processed, latest_data_point_lock,nbChannel,), name="Integrity-{}".format(i))
+    t_i = StopableThread(target=worker_integrity_check, args=(q_raw, q_processed, latest_data_point_lock,nbChannel,), name="Integrity-{}".format(i))
     threads_integrity.append(t_i)
-    tStart(t_i)
+    thread_list.append(t_i)
+    t_i.start()
 
-t_save = Thread(target=worker_write_to_file, args=(q_processed,nbChannel,), name="Writer")
-tStart(t_save)
+thread_list
+t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,), name="Writer")
+t_save.start()
+thread_list.append(t_save)
+#gui=Thread(target=gui_t, args=(root,), name="GUI")
+#tStart(gui)
 
+root=PolyleptiqueApp()
 root.protocol("WM_DELETE_WINDOW", on_closing)
+
+a=setupP(nbChannel,fig,timeToDisplay)              
+ani=animation.FuncAnimation(fig, animate,fargs=(a[0],a[1],a[2],a[3],a[4]), interval=10, blit=True)
+
+#gui = Thread(target=gui_t, args=(root,), name="GUI")
+#tStart(gui)
+
 root.mainloop()
+enumerate()
+for th in thread_list:
+    th.shutdown_flag.set()
+    th.join()
+    
