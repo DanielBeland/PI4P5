@@ -33,7 +33,6 @@ from tkinter import messagebox
 
 from Save_values import *
 from real_time_plot import *
-from threadStart import tStart
 
 global load
 global latest_data_point
