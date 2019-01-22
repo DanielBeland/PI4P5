@@ -87,7 +87,7 @@ def worker_acquisition(q_raw,nbChannel):
 #        dataRaw=ser.readline().split(b',')
 #        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
         data = np.random.randint(1000,size=(11), dtype=int)
-        print(data)
+#        print(data)
         time.sleep(0.01)
         # Enqueue
         q_raw.put(data)
