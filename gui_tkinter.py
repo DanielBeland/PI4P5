@@ -24,7 +24,7 @@ from queue import Queue, Empty, Full
 from threading import Thread, Lock, current_thread
 
 from collections import deque
-from tkinter import filedialog
+from tkinter import filedialog, Scale
 from matplotlib.widgets import Slider
 
 import tkinter as tk
@@ -190,10 +190,9 @@ def loadData(self):
     global load
     file_path=select_file()
     setup_data=setup_save_plot(file_path)
-    spos=plot_save_data(setup_data[0],setup_data[1],setup_data[2])
-    update_ax(spos,setup_data[0],setup_data[1],setup_data[2])
+    plot_save_data(setup_data[0],setup_data[1],setup_data[2])
     load=True
-    return setup_data[1]
+    return setup_data
 
 
 class PolyleptiqueApp(tk.Tk):
@@ -297,47 +296,31 @@ class PageTwo(tk.Frame):
         if load==True:
             MsgBox=tk.messagebox.askquestion("New Data","Do you want to load new data?")
             if MsgBox=='yes':
-                self.canvas.get_tk_widget().destroy()
+                self.canvas_load.get_tk_widget().destroy()
                 setup_data=loadData(self)
-                self.canvas_load = FigureCanvasTkAgg(setup_data, self)
+                self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
                 self.canvas_load.draw()
                 self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
                 self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+                self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
+                self.slider.pack()
             else:
                 pass
         else:
             setup_data=loadData(self)
-            self.canvas_load = FigureCanvasTkAgg(setup_data, self)
+            self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
             self.canvas_load.draw()
-            toolbar = NavigationToolbar2Tk(self.canvas, self)
+            toolbar = NavigationToolbar2Tk(self.canvas_load, self)
             toolbar.update()
             self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
             self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-        
-#class PageThree(tk.Frame):
-#    def __init__(self,parent,controller):
-#        tk.Frame.__init__(self,parent)
-#        label=ttk.Label(self,text="Graph Page",font=LARGE_FONT)
-#        
-#        label.pack(pady=10,padx=10)
-#        
-#        button1=ttk.Button(self, text="Back To home",
-#                          command=lambda: controller.show_frame(StartPage))
-#        
-#        button1.pack()
-#
-#        canvas = FigureCanvasTkAgg(fig, self)
-#        canvas.draw()
-#        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-#        
-#        toolbar = NavigationToolbar2Tk(canvas, self)
-#        toolbar.update()
-#        canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-#        
-#    def event(self):
-#        pass
-#def updateVal():
-#    return np.random.randint(1000,size=(1,nbChannel), dtype=int)
+            self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL,length=600, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
+            self.slider.pack() 
+    def update_ax(self,data,fig_load,ax):
+        pos=self.slider.get()
+        for k in range(data.shape[1]):
+            ax[k].axis([pos,pos+10,-1,1])
+            fig_load.canvas.draw_idle()
 def select_file():
     root = tk.Tk()
     root.withdraw()
@@ -357,17 +340,7 @@ def setup_save_plot(file_path):
 def plot_save_data(data,fig_load,ax):
     for k in range(data.shape[1]):
         ax[k].plot(np.arange(data.shape[0]-1),data[1:data.shape[0],k],'b')
-        axpos = plt.axes([0.2, 0.1, 0.65, 0.03])
-    spos = Slider(axpos, 'Pos', 0.1, data.shape[0]-12)
-    return spos
-def update_ax(spos,data,fig_load,ax):
-    def update(val):
-        pos=spos.val
-        for k in range(data.shape[1]):
-            ax[k].axis([pos,pos+10,-1,1])
-            fig_load.canvas.draw_idle()
-
-    spos.on_changed(update)
+        plt.axes([0.2, 0.1, 0.65, 0.03])
 
         
 def on_closing():
