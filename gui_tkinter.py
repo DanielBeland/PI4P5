@@ -126,7 +126,12 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
 
 
 def worker_write_to_file(q_processed,nbChannel):
-    setup('data.csv')
+    root = tk.Tk()
+    root.withdraw()
+    root.update()
+    fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = "/",title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))
+
+    setup(fileSaveName)
     t = current_thread()
     while not t.shutdown_flag.is_set(): 
         time.sleep(10)
@@ -137,13 +142,13 @@ def worker_write_to_file(q_processed,nbChannel):
             for i in range(curr_size):
                 data[i] = q_processed.get()
                 q_processed.task_done()
-            write(data,'data.csv')
+            write(data,fileSaveName)
     curr_size = q_processed.qsize()
     data=np.zeros((curr_size,nbChannel), dtype=int)
     for i in range(curr_size):
         data[i] = q_processed.get()
         q_processed.task_done()
-    write(data,'data.csv')
+    write(data,fileSaveName)
 
 
 def setupP(n,fig,ttd):
@@ -324,7 +329,7 @@ class PageTwo(tk.Frame):
 def select_file():
     root = tk.Tk()
     root.withdraw()
-
+    root.update()
     file_path = filedialog.askopenfilename()
     return file_path
 def setup_save_plot(file_path):
