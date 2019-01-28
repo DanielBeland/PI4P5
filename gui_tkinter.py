@@ -72,24 +72,25 @@ def worker_acquisition(q_raw,nbChannel):
     ser = serial.Serial()
     ser.baudrate = 9600
     ser.timeout = 2
-#    while True:
-#        port='COM11'
-#        ser.port = port
-#        ser.open()
-#        break
+    while True:
+        port='COM11'
+        ser.port = port
+        ser.open()
+        break
 #    data=np.zeros((nbChannel), dtype=int)
     while not t.shutdown_flag.is_set():
         # Acquire
         data=np.zeros((nbChannel), dtype=int)
 #        data = np.random.randint(100,size=(11), dtype=int)
         # Delay to emulate the Bluetooth API call
-#        dataRaw=ser.readline().split(b',')
-#        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
-        data = np.random.randint(1000,size=(11), dtype=int)
+        dataRaw=ser.readline().split(b',')
+        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
+#        data = np.random.randint(1000,size=(11), dtype=int)
 #        print(data)
-        time.sleep(0.01)
+#        time.sleep(0.01)
         # Enqueue
         q_raw.put(data)
+    ser.close()
 
 
 def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
