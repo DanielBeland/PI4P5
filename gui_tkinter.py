@@ -36,8 +36,6 @@ from real_time_plot import *
 import AcqVerSav_threads
 
 global load
-global stopSignal
-global thread_list
 
 file_path=[]
 LARGE_FONT=("Verdana",12)
@@ -157,6 +155,7 @@ class StartPage(tk.Frame):
         button_load.pack() 
         
     def event(self):
+        AcqVerSav_threads.stopThreads(AcqVerSav_threads.thread_list)
         pass
         
 class PageOne(tk.Frame):
@@ -179,8 +178,7 @@ class PageOne(tk.Frame):
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
     def event(self):
-        global thread_list
-        thread_list = AcqVerSav_threads.initializeThreads(nbChannel, 3, 10000)
+        AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(nbChannel, 3, 10000)
         pass
         
 class PageTwo(tk.Frame):
@@ -252,7 +250,7 @@ def plot_save_data(data,fig_load,ax):
         
 def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
-        AcqVerSav_threads.stopThreads(thread_list)
+        AcqVerSav_threads.stopThreads(AcqVerSav_threads.thread_list)
         root.destroy()   
 
 

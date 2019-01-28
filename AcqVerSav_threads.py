@@ -3,6 +3,8 @@ import time
 import serial
 import sys
 import datetime as dt
+import inspect
+import os
 
 import matplotlib
 #matplotlib.use("TkAgg")
@@ -29,6 +31,7 @@ from Save_values import *
 from real_time_plot import *
 
 latest_data_point = []
+thread_list = []
 
 class StopableThread(threading.Thread):
  
@@ -49,7 +52,7 @@ class StopableThread(threading.Thread):
         # ... Clean shutdown code here ...
         print('Thread #%s stopped' % self.ident)
     
-def worker_acquisition(q_raw,nbChannel):
+def worker_acquisition(q_raw,nbChannel,select_file_lock):
     t = current_thread()
     ser = serial.Serial()
     ser.baudrate = 9600
@@ -60,18 +63,19 @@ def worker_acquisition(q_raw,nbChannel):
 #        ser.open()
 #        break
 #    data=np.zeros((nbChannel), dtype=int)
-    while not t.shutdown_flag.is_set():
-        # Acquire
-        data=np.zeros((nbChannel), dtype=int)
-#        data = np.random.randint(100,size=(11), dtype=int)
-        # Delay to emulate the Bluetooth API call
-#        dataRaw=ser.readline().split(b',')
-#        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
-        data = np.random.randint(1000,size=(11), dtype=int)
-#        print(data)
-        time.sleep(0.01)
-        # Enqueue
-        q_raw.put(data)
+    if select_file_lock.acquire():
+        while not t.shutdown_flag.is_set():
+            # Acquire
+            data=np.zeros((nbChannel), dtype=int)
+    #        data = np.random.randint(100,size=(11), dtype=int)
+            # Delay to emulate the Bluetooth API call
+    #        dataRaw=ser.readline().split(b',')
+    #        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
+            data = np.random.randint(1000,size=(11), dtype=int)
+    #        print(data)
+            time.sleep(0.01)
+            # Enqueue
+            q_raw.put(data)
 
 
 def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
@@ -107,14 +111,15 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
         
 
 
-def worker_write_to_file(q_processed,nbChannel):
+def worker_write_to_file(q_processed,nbChannel,select_file_lock):
     root = tk.Tk()
     root.withdraw()
     root.update()
-    fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = "/",title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))
-
+    fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))
+    
     setup(fileSaveName)
     t = current_thread()
+    select_file_lock.release()
     while not t.shutdown_flag.is_set(): 
         time.sleep(10)
         curr_size = q_processed.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
@@ -137,8 +142,10 @@ def initializeThreads(nbChannel, nbIntegrityWorkers, qSize):
     q_raw = Queue(qSize)
     q_processed = Queue(qSize)
     thread_list=[]
+    select_file_lock=Lock()
+    select_file_lock.acquire(blocking=True)
     # Data acquisition worker
-    t_acq = StopableThread(target=worker_acquisition, args=(q_raw,nbChannel,), name="Acquisition")
+    t_acq = StopableThread(target=worker_acquisition, args=(q_raw,nbChannel,select_file_lock,), name="Acquisition")
     t_acq.start()
     thread_list.append(t_acq)
     # Integrity check worker[s]
@@ -152,7 +159,7 @@ def initializeThreads(nbChannel, nbIntegrityWorkers, qSize):
         thread_list.append(t_i)
         t_i.start()
     
-    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,), name="Writer")
+    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,select_file_lock,), name="Writer")
     t_save.start()
     thread_list.append(t_save)
     return thread_list
