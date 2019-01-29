@@ -176,7 +176,7 @@ class PageOne(tk.Frame):
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
     def event(self):
-        AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(nbChannel, 3, 10000,saveFrequency*samplingRate)
+        AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
         pass
         
 class PageTwo(tk.Frame):
@@ -262,9 +262,11 @@ frameCounter = 1
 samplingRate = 1000 #in Hz
 timeToDisplay = 1 #in s
 saveFrequency = 10 #in seconds
-a=setupP(nbChannel,fig,timeToDisplay*samplingRate) 
-             
-ani=animation.FuncAnimation(fig, animate,fargs=(a[0],a[1],a[2],a[3],a[4]), interval=10, blit=True)
+nbIntegrityWorkers=4
+qSize = 100000
+
+a=setupP(nbChannel,fig,timeToDisplay*samplingRate)
+ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=1000/samplingRate, blit=True)
 
 #gui = Thread(target=gui_t, args=(root,), name="GUI")
 #tStart(gui)

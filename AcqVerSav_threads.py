@@ -114,7 +114,7 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
         lock.release()
 
 
-def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveFrequency):
+def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize):
     root = tk.Tk()
     root.withdraw()
     root.update()
@@ -126,8 +126,8 @@ def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveFrequency):
     while not t.shutdown_flag.is_set(): 
         time.sleep(10)
         curr_size = q_processed.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
-#        print(curr_size)
-        if curr_size > 1000:
+        print(curr_size)
+        if curr_size > saveSize:
             data=np.zeros((curr_size,nbChannel), dtype=int)
             for i in range(curr_size):
                 data[i] = q_processed.get()
@@ -140,7 +140,7 @@ def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveFrequency):
         q_processed.task_done()
     write(data,fileSaveName)
     
-def initializeThreads(nbChannel, nbIntegrityWorkers, qSize, saveFrequency):
+def initializeThreads(nbChannel, nbIntegrityWorkers, qSize, saveSize):
     # Initialize the Queue's
     q_raw = Queue(qSize)
     q_processed = Queue(qSize)
@@ -162,7 +162,7 @@ def initializeThreads(nbChannel, nbIntegrityWorkers, qSize, saveFrequency):
         thread_list.append(t_i)
         t_i.start()
     
-    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,select_file_lock,saveFrequency,), name="Writer")
+    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,select_file_lock,saveSize,), name="Writer")
     t_save.start()
     thread_list.append(t_save)
     return thread_list
