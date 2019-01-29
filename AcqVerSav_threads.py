@@ -73,7 +73,7 @@ def worker_acquisition(q_raw,nbChannel,select_file_lock):
     #        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
             data = np.random.randint(1000,size=(11), dtype=int)
     #        print(data)
-            time.sleep(0.01)
+            time.sleep(0.001)
             # Enqueue
             q_raw.put(data)
 
@@ -108,10 +108,13 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
         # Enqueue processed
 
         q_processed.put(data)
-        
+    if lock.acquire(blocking=False): # If lock is taken don't block just pass
+        latest_data_point = np.zeros((nbChannel), dtype=int)
+#            print(latest_data_point)
+        lock.release()
 
 
-def worker_write_to_file(q_processed,nbChannel,select_file_lock):
+def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveFrequency):
     root = tk.Tk()
     root.withdraw()
     root.update()
@@ -137,7 +140,7 @@ def worker_write_to_file(q_processed,nbChannel,select_file_lock):
         q_processed.task_done()
     write(data,fileSaveName)
     
-def initializeThreads(nbChannel, nbIntegrityWorkers, qSize):
+def initializeThreads(nbChannel, nbIntegrityWorkers, qSize, saveFrequency):
     # Initialize the Queue's
     q_raw = Queue(qSize)
     q_processed = Queue(qSize)
@@ -159,7 +162,7 @@ def initializeThreads(nbChannel, nbIntegrityWorkers, qSize):
         thread_list.append(t_i)
         t_i.start()
     
-    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,select_file_lock,), name="Writer")
+    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,select_file_lock,saveFrequency,), name="Writer")
     t_save.start()
     thread_list.append(t_save)
     return thread_list
@@ -168,3 +171,4 @@ def stopThreads(threads):
     for th in threads:
         th.shutdown_flag.set()
         th.join()
+    threads=[]

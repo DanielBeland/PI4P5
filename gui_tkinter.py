@@ -41,9 +41,7 @@ file_path=[]
 LARGE_FONT=("Verdana",12)
 style.use("ggplot")
 fig = Figure(figsize=(5,5), dpi=100)
-nbChannel=11
-frameCounter = 1
-timeToDisplay = 1000 
+
 #val= np.random.randint(1000,size=(1,nbChannel), dtype=int)
 load=False
 
@@ -52,7 +50,7 @@ load=False
 def setupP(n,fig,ttd):
     AcqVerSav_threads.latest_data_point
     AcqVerSav_threads.latest_data_point = np.zeros(n, dtype=int)
-    xs = np.linspace(1,10,ttd)
+    xs = np.linspace(1,1000,ttd)
     ax=[None]*n
     ys=[None]*n
     line=[None]*n
@@ -178,7 +176,7 @@ class PageOne(tk.Frame):
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
     def event(self):
-        AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(nbChannel, 3, 10000)
+        AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(nbChannel, 3, 10000,saveFrequency*samplingRate)
         pass
         
 class PageTwo(tk.Frame):
@@ -232,6 +230,7 @@ def select_file():
     root.update()
     file_path = filedialog.askopenfilename()
     return file_path
+
 def setup_save_plot(file_path):
     data = np.genfromtxt(file_path, delimiter=',')
     fig_load=Figure()
@@ -258,7 +257,13 @@ def on_closing():
 root=PolyleptiqueApp()
 root.protocol("WM_DELETE_WINDOW", on_closing)
 
-a=setupP(nbChannel,fig,timeToDisplay)              
+nbChannel=11
+frameCounter = 1
+samplingRate = 1000 #in Hz
+timeToDisplay = 1 #in s
+saveFrequency = 10 #in seconds
+a=setupP(nbChannel,fig,timeToDisplay*samplingRate) 
+             
 ani=animation.FuncAnimation(fig, animate,fargs=(a[0],a[1],a[2],a[3],a[4]), interval=10, blit=True)
 
 #gui = Thread(target=gui_t, args=(root,), name="GUI")
