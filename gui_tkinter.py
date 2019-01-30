@@ -10,6 +10,7 @@ import serial
 import sys
 import datetime as dt
 import os
+import inspect
 import matplotlib
 #matplotlib.use("TkAgg")
 
@@ -48,7 +49,7 @@ class PolyleptiqueApp(tk.Tk):
         
         
         tk.Tk.__init__(self,*args,**kwargs)
-        tk.Tk.wm_iconbitmap(self,default="logo.ico")
+#        tk.Tk.wm_iconbitmap(self,default="logo.ico")
         tk.Tk.wm_title(self, "Polyleptique")
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
@@ -115,6 +116,11 @@ class LivePlotPage(tk.Frame):
         
         button1.pack()
         
+        button2=ttk.Button(self, text="Create/Select save file",
+                          command=lambda: controller.show_frame(PageOne))
+        
+        button2.pack()
+        
         canvas = FigureCanvasTkAgg(fig, self)
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
@@ -123,7 +129,26 @@ class LivePlotPage(tk.Frame):
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
     def event(self):
-        AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
+        fileNameOk=False
+        while not fileNameOk :   
+            DefaultPath=""
+            SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+            for root, dirs, files in os.walk(SettingsDirectory):
+                if 'SettingsFile.txt' in files:
+                    SettingFile=open("SettingsFile.txt","r")
+                    DefaultPath=SettingFile.readline()
+                    fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = DefaultPath ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))   
+            if DefaultPath=="":
+                fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))
+                SettingsFile=open("SettingsFile.txt","w+")
+                SettingsFile.write(os.path.dirname(fileSaveName))
+            if fileSaveName and fileSaveName[-3:]=="csv" :
+                    fileNameOk=True
+            else:
+    #                if not messagebox.askokcancel("Invalid file format", "Please enter a valid file name."):
+                break
+        if fileNameOk:
+            AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(fileSaveName, nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
         pass
     
 ## Page for the loaded data plot #########################

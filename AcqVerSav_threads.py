@@ -114,22 +114,7 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
         lock.release()
 
 
-def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize):
-    root = tk.Tk()
-    root.withdraw()
-    root.update()
-    DefaultPath=""
-    SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
-    for root, dirs, files in os.walk(SettingsDirectory):
-        if 'SettingsFile.txt' in files:
-            SettingFile=open("SettingsFile.txt","r")
-            DefaultPath=SettingFile.readline()
-            fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = DefaultPath ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))   
-    if DefaultPath=="":
-        fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))
-        SettingsFile=open("SettingsFile.txt","w+")
-        SettingsFile.write(os.path.dirname(fileSaveName))
-        
+def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize,fileSaveName):
     setup(fileSaveName)
     t = current_thread()
     select_file_lock.release()
@@ -150,7 +135,7 @@ def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize):
         q_processed.task_done()
     write(data,fileSaveName)
     
-def initializeThreads(nbChannel, nbIntegrityWorkers, qSize, saveSize):
+def initializeThreads(fileSaveName, nbChannel, nbIntegrityWorkers, qSize, saveSize):
     # Initialize the Queue's
     q_raw = Queue(qSize)
     q_processed = Queue(qSize)
@@ -172,7 +157,7 @@ def initializeThreads(nbChannel, nbIntegrityWorkers, qSize, saveSize):
         thread_list.append(t_i)
         t_i.start()
     
-    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,select_file_lock,saveSize,), name="Writer")
+    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,select_file_lock,saveSize,fileSaveName,), name="Writer")
     t_save.start()
     thread_list.append(t_save)
     return thread_list
