@@ -9,7 +9,7 @@ import time
 import serial
 import sys
 import datetime as dt
-
+import os
 import matplotlib
 #matplotlib.use("TkAgg")
 
@@ -35,65 +35,11 @@ from Save_values import *
 from real_time_plot import *
 import AcqVerSav_threads
 
-global load
-
-file_path=[]
-LARGE_FONT=("Verdana",12)
-style.use("ggplot")
-fig = Figure(figsize=(5,5), dpi=100)
-
-#val= np.random.randint(1000,size=(1,nbChannel), dtype=int)
-load=False
 
 
 
-def setupP(n,fig,ttd):
-    AcqVerSav_threads.latest_data_point
-    AcqVerSav_threads.latest_data_point = np.zeros(n, dtype=int)
-    xs = np.linspace(1,1000,ttd)
-    ax=[None]*n
-    ys=[None]*n
-    line=[None]*n
-    for k in range(n):
-        ax[k] = fig.add_subplot(n, 1, k+1)
-        ax[k].set_ylim(0, 1023) #Changer pour chaque capteur
-        ys[k] = deque([0]*ttd)
-        
-        linek, = ax[k].plot(xs, ys[k])
-        line[k]=linek
-    return [ax, xs, ys,line,n]
 
-def animate(frameCounter,ax,xs,ys,lines,n):
 
-    for l in range(n):
-        
-        ys[l].popleft()
-        ys[l].append(AcqVerSav_threads.latest_data_point[l])
-
-        lines[l].set_xdata(xs)
-        lines[l].set_ydata(ys[l])
-
-    # Format plot
-#    plt.xticks(rotation=45, ha='right')
-#    plt.subplots_adjust(bottom=0.30)
-    return lines
-# Set up plot to call animate() function periodically
-    
-    
-    
-#    
-#    pullData = open("sampleData.txt","r").read()
-#    dataList=pullData.split('\n')
-#    xList=val
-#    yList=[]
-
-def loadData(self):
-    global load
-    file_path=select_file()
-    setup_data=setup_save_plot(file_path)
-    plot_save_data(setup_data[0],setup_data[1],setup_data[2])
-    load=True
-    return setup_data
 
 
 class PolyleptiqueApp(tk.Tk):
@@ -102,8 +48,7 @@ class PolyleptiqueApp(tk.Tk):
         
         
         tk.Tk.__init__(self,*args,**kwargs)
-        
-#        tk.Tk.iconbitmap(self,default="logo.ico")
+        tk.Tk.wm_iconbitmap(self,default="logo.ico")
         tk.Tk.wm_title(self, "Polyleptique")
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
@@ -112,7 +57,7 @@ class PolyleptiqueApp(tk.Tk):
         
         self.frames= {}
         
-        for F in (StartPage, PageOne, PageTwo):
+        for F in (StartPage, LivePlotPage, LoadPlotPage, SettingPage):
         
             frame = F(container, self)
             
@@ -127,14 +72,10 @@ class PolyleptiqueApp(tk.Tk):
         frame=self.frames[cont]
         frame.tkraise()
         frame.event()
-        
-#    def on_exit(self):
-#        """When you click to exit, this function is called"""
-#        if messagebox.askyesno("Exit", "Do you want to quit the application?"):
-#            self.destroy()
+    
         
         
-
+## Starting page, openend when app is launched################################3
 class StartPage(tk.Frame):
     
     def __init__(self,parent,controller):
@@ -144,19 +85,25 @@ class StartPage(tk.Frame):
         label.pack(pady=10,padx=10)
         
         button_new=ttk.Button(self, text="Start new recording",
-                          command=lambda: controller.show_frame(PageOne))
+                          command=lambda: controller.show_frame(LivePlotPage))
         
         button_new.pack()
         
         button_load=ttk.Button(self, text="Load previous data",
-                              command=lambda: controller.show_frame(PageTwo))
+                              command=lambda: controller.show_frame(LoadPlotPage))
         button_load.pack() 
+        button_Setting=ttk.Button(self, text="Settings",
+                              command=lambda: controller.show_frame(SettingPage))
+        button_Setting.pack() 
         
     def event(self):
         AcqVerSav_threads.stopThreads(AcqVerSav_threads.thread_list)
         pass
-        
-class PageOne(tk.Frame):
+    
+    
+    
+## Page for the live plot of sensor data#####################################
+class LivePlotPage(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
         label=ttk.Label(self,text="Page 1",font=LARGE_FONT)
@@ -178,19 +125,23 @@ class PageOne(tk.Frame):
     def event(self):
         AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
         pass
+    
+## Page for the loaded data plot #########################
         
-class PageTwo(tk.Frame):
+class LoadPlotPage(tk.Frame):
     def __init__(self,parent,controller):
 
         tk.Frame.__init__(self,parent)
         label=ttk.Label(self,text="Page 2",font=LARGE_FONT)
         
         label.pack(pady=10,padx=10)
+#        label.grid(row=1,column=0)
         
         button1=ttk.Button(self, text="Back To home",
                           command=lambda: controller.show_frame(StartPage))
         
         button1.pack()
+#        button1.grid(row=2,column=0)
         
         
     def event(self):
@@ -200,51 +151,148 @@ class PageTwo(tk.Frame):
             MsgBox=tk.messagebox.askquestion("New Data","Do you want to load new data?")
             if MsgBox=='yes':
                 self.canvas_load.get_tk_widget().destroy()
-                setup_data=loadData(self)
+                self.slider.destroy()
+                setup_data=loadDataSetup(self)
+                toolbar = NavigationToolbar2Tk(self.canvas_load, self)
+                toolbar.update()    
                 self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
                 self.canvas_load.draw()
                 self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
                 self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-                self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
+                self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL,length=600, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
                 self.slider.pack()
             else:
                 pass
         else:
-            setup_data=loadData(self)
+            setup_data=loadDataSetup(self)
             self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
             self.canvas_load.draw()
             toolbar = NavigationToolbar2Tk(self.canvas_load, self)
             toolbar.update()
             self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
             self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-            self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL,length=600, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
+#            self.canvas_load.get_tk_widget().grid(row=3,column=0)
+            
+            self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL, length=600, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
             self.slider.pack() 
+#            self.slider.grid(column=0,row=4) 
     def update_ax(self,data,fig_load,ax):
         pos=self.slider.get()
         for k in range(data.shape[1]):
-            ax[k].axis([pos,pos+10,-1,1])
+            ax[k].set_xlim(pos,pos+10)
             fig_load.canvas.draw_idle()
-def select_file():
-    root = tk.Tk()
-    root.withdraw()
-    root.update()
+            
+            
+            
+            
+## Page for the live plot of sensor data#####################################
+class SettingPage(tk.Frame):
+    def __init__(self,parent,controller):
+        tk.Frame.__init__(self,parent)
+        label=ttk.Label(self,text="Page 1",font=LARGE_FONT)
+        
+        label.pack()
+        
+        button1=ttk.Button(self, text="Back To home",
+                          command=lambda: controller.show_frame(StartPage))
+        
+        button1.pack()
+        buttonPath=ttk.Button(self, text="default Path",
+                          command=lambda: DefinePath(self))
+        
+        buttonPath.pack()
+        DefaultPath=""
+        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+        for root, dirs, files in os.walk(SettingsDirectory):
+            if 'SettingsFile.txt' in files:
+                SettingFile=open("SettingsFile.txt","r")
+                DefaultPath=SettingFile.readline()
+        self.LabelText=tk.StringVar()
+        self.LabelText.set('Path: '+DefaultPath)
+        self.labelPathName=ttk.Label(self,textvariable=self.LabelText)
+        self.labelPathName.pack()
+    def event(self):
+        pass
+#### Setup Load data plot ################
+        
+def DefinePath(self):
+    self.savePath=filedialog.askdirectory()
+    pathStr='Path: '
+    self.LabelText.set(pathStr+self.savePath)
+    SettingsFile=open("SettingsFile.txt","w+")
+    SettingsFile.write(self.savePath)
+def loadDataSetup(self):
+    global load
+    setup_data=LoadData()
+    load=True
+    return setup_data
+            
+def LoadData():
     file_path = filedialog.askopenfilename()
-    return file_path
-
-def setup_save_plot(file_path):
     data = np.genfromtxt(file_path, delimiter=',')
     fig_load=Figure()
     ax=[None]*data.shape[1]
     for k in range(data.shape[1]):
         ax[k] = fig_load.add_subplot(data.shape[1], 1, k+1)
-        plt.subplots_adjust(bottom=0.25)
         ax[k].axis([0, 10, 0, 1])
-    return[data,fig_load,ax]
-
-def plot_save_data(data,fig_load,ax):
-    for k in range(data.shape[1]):
         ax[k].plot(np.arange(data.shape[0]-1),data[1:data.shape[0],k],'b')
-        plt.axes([0.2, 0.1, 0.65, 0.03])
+    ax[0].set_ylim(0, 1023) #Changer pour chaque capteur
+    ax[1].set_ylim(0, 1023)
+    ax[2].set_ylim(0, 1023)
+    ax[3].set_ylim(0, 1023)
+    ax[4].set_ylim(0, 1023)
+    ax[5].set_ylim(0, 1023)
+    ax[6].set_ylim(0, 1023)
+    ax[7].set_ylim(0, 1023)
+    ax[8].set_ylim(0, 1023)
+    ax[9].set_ylim(0, 1023)
+    ax[10].set_ylim(0, 1023)
+    return[data,fig_load,ax]
+    
+    
+####Setup Live Plot data and update##############
+def setupP(n,fig,ttd):
+    AcqVerSav_threads.latest_data_point
+    AcqVerSav_threads.latest_data_point = np.zeros(n, dtype=int)
+    xs = np.linspace(1,1000,ttd)
+    ax=[None]*n
+    ys=[None]*n
+    line=[None]*n
+    for k in range(n):
+        ax[k] = fig.add_subplot(n, 1, k+1)
+        ys[k] = deque([0]*ttd)
+        
+        linek, = ax[k].plot(xs, ys[k])
+        line[k]=linek
+        
+    ax[0].set_ylim(0, 1023) #Changer pour chaque capteur
+    ax[1].set_ylim(0, 1023)
+    ax[2].set_ylim(0, 1023)
+    ax[3].set_ylim(0, 1023)
+    ax[4].set_ylim(0, 1023)
+    ax[5].set_ylim(0, 1023)
+    ax[6].set_ylim(0, 1023)
+    ax[7].set_ylim(0, 1023)
+    ax[8].set_ylim(0, 1023)
+    ax[9].set_ylim(0, 1023)
+    ax[10].set_ylim(0, 1023)
+    
+    
+    
+    
+    return [ax, xs, ys,line,n]
+
+def animate(frameCounter,ax,xs,ys,lines,n):
+
+    for l in range(n):
+        
+        ys[l].popleft()
+        ys[l].append(AcqVerSav_threads.latest_data_point[l])
+
+        lines[l].set_xdata(xs)
+        lines[l].set_ydata(ys[l])
+    return lines
+######## Save on closing window################3
 
         
 def on_closing():
@@ -253,9 +301,17 @@ def on_closing():
         root.destroy()   
 
 
+global load
+LARGE_FONT=("Verdana",12)
+style.use("ggplot")
+fig = Figure(figsize=(5,5), dpi=100)
+
+load=False
 
 root=PolyleptiqueApp()
 root.protocol("WM_DELETE_WINDOW", on_closing)
+
+
 
 nbChannel=11
 frameCounter = 1
