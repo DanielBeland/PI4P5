@@ -119,7 +119,7 @@ def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize,fileSav
     t = current_thread()
     select_file_lock.release()
     while not t.shutdown_flag.is_set(): 
-        time.sleep(10)
+        time.sleep(1)
         curr_size = q_processed.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
         print(curr_size)
         if curr_size > saveSize:

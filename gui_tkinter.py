@@ -343,7 +343,7 @@ frameCounter = 1
 samplingRate = 1000 #in Hz
 timeToDisplay = 1 #in s
 saveFrequency = 10 #in seconds
-nbIntegrityWorkers=4
+nbIntegrityWorkers=2
 qSize = 100000
 
 a=setupP(nbChannel,fig,timeToDisplay*samplingRate)
