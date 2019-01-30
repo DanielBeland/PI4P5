@@ -73,7 +73,7 @@ def worker_acquisition(q_raw,nbChannel,select_file_lock):
     #        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
             data = np.random.randint(1000,size=(11), dtype=int)
     #        print(data)
-            time.sleep(0.001)
+#            time.sleep(0.0001)
             # Enqueue
             q_raw.put(data)
 
@@ -114,17 +114,16 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
         lock.release()
 
 
-def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize):
+def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize,fileSaveName):
     root = tk.Tk()
     root.withdraw()
     root.update()
-    fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))
     
     setup(fileSaveName)
     t = current_thread()
     select_file_lock.release()
     while not t.shutdown_flag.is_set(): 
-        time.sleep(10)
+        time.sleep(1)
         curr_size = q_processed.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
         print(curr_size)
         if curr_size > saveSize:
@@ -140,7 +139,7 @@ def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize):
         q_processed.task_done()
     write(data,fileSaveName)
     
-def initializeThreads(nbChannel, nbIntegrityWorkers, qSize, saveSize):
+def initializeThreads(fileSaveName,nbChannel, nbIntegrityWorkers, qSize, saveSize):
     # Initialize the Queue's
     q_raw = Queue(qSize)
     q_processed = Queue(qSize)
@@ -162,7 +161,7 @@ def initializeThreads(nbChannel, nbIntegrityWorkers, qSize, saveSize):
         thread_list.append(t_i)
         t_i.start()
     
-    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,select_file_lock,saveSize,), name="Writer")
+    t_save = StopableThread(target=worker_write_to_file, args=(q_processed,nbChannel,select_file_lock,saveSize,fileSaveName,), name="Writer")
     t_save.start()
     thread_list.append(t_save)
     return thread_list

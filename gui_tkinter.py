@@ -9,6 +9,8 @@ import time
 import serial
 import sys
 import datetime as dt
+import inspect
+import os
 
 import matplotlib
 #matplotlib.use("TkAgg")
@@ -163,11 +165,14 @@ class PageOne(tk.Frame):
         
         label.pack(pady=10,padx=10)
         
-        button1=ttk.Button(self, text="Back To home",
+        button1=ttk.Button(self, text="Back to home",
                           command=lambda: controller.show_frame(StartPage))
         
         button1.pack()
+        button2=ttk.Button(self, text="Create/Select save file",
+                          command=lambda: controller.show_frame(PageOne))
         
+        button2.pack()
         canvas = FigureCanvasTkAgg(fig, self)
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
@@ -176,7 +181,19 @@ class PageOne(tk.Frame):
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
     def event(self):
-        AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
+        
+        fileNameOk=False
+        while not fileNameOk :   
+            fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Enter new file name or select existing file to overwrite",filetypes = (("csv file","*.csv"),("all files","*.*")))
+            if fileSaveName and fileSaveName[-3:]=="csv" :
+                fileNameOk=True
+            else:
+#                if not messagebox.askokcancel("Invalid file format", "Please enter a valid file name."):
+                    break
+        if fileNameOk:
+            AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(fileSaveName, nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
+        else:
+            lambda: controller.show_frame(StartPage)
         pass
         
 class PageTwo(tk.Frame):
@@ -262,7 +279,7 @@ frameCounter = 1
 samplingRate = 1000 #in Hz
 timeToDisplay = 1 #in s
 saveFrequency = 10 #in seconds
-nbIntegrityWorkers=4
+nbIntegrityWorkers=2
 qSize = 100000
 
 a=setupP(nbChannel,fig,timeToDisplay*samplingRate)
