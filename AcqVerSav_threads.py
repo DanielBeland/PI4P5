@@ -118,8 +118,18 @@ def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize):
     root = tk.Tk()
     root.withdraw()
     root.update()
-    fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))
-    
+    DefaultPath=""
+    SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+    for root, dirs, files in os.walk(SettingsDirectory):
+        if 'SettingsFile.txt' in files:
+            SettingFile=open("SettingsFile.txt","r")
+            DefaultPath=SettingFile.readline()
+            fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = DefaultPath ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))   
+    if DefaultPath=="":
+        fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))
+        SettingsFile=open("SettingsFile.txt","w+")
+        SettingsFile.write(os.path.dirname(fileSaveName))
+        
     setup(fileSaveName)
     t = current_thread()
     select_file_lock.release()
