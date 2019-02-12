@@ -117,7 +117,7 @@ class LivePlotPage(tk.Frame):
         button1.pack()
         
         button2=ttk.Button(self, text="Create/Select save file",
-                          command=lambda: controller.show_frame(PageOne))
+                          command=lambda: controller.show_frame(LivePlotPage))
         
         button2.pack()
         
