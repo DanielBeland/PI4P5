@@ -25,7 +25,7 @@ from queue import Queue, Empty, Full
 from threading import Thread, Lock, current_thread
 
 from collections import deque
-from tkinter import filedialog, Scale
+from tkinter import filedialog, Scale, Entry
 from matplotlib.widgets import Slider
 
 import tkinter as tk
@@ -36,6 +36,7 @@ from Save_values import *
 from real_time_plot import *
 import AcqVerSav_threads
 
+from functools import partial
 
 
 
@@ -58,7 +59,7 @@ class PolyleptiqueApp(tk.Tk):
         
         self.frames= {}
         
-        for F in (StartPage, LivePlotPage, LoadPlotPage, SettingPage):
+        for F in (StartPage, LivePlotPage, LoadPlotPage):
         
             frame = F(container, self)
             
@@ -70,6 +71,7 @@ class PolyleptiqueApp(tk.Tk):
         self.show_frame(StartPage)
         
     def show_frame(self, cont):
+            
         frame=self.frames[cont]
         frame.tkraise()
         frame.event()
@@ -94,14 +96,19 @@ class StartPage(tk.Frame):
                               command=lambda: controller.show_frame(LoadPlotPage))
         button_load.pack() 
         button_Setting=ttk.Button(self, text="Settings",
-                              command=lambda: controller.show_frame(SettingPage))
+                              command=lambda: PopSettingPage(self))
         button_Setting.pack() 
+        setup_data=PlotStartPage()
+        self.canvas_load = FigureCanvasTkAgg(setup_data[0], self)
+        self.canvas_load.draw()
+        self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+        self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
         
     def event(self):
         AcqVerSav_threads.stopThreads(AcqVerSav_threads.thread_list)
         pass
     
-    
+
     
 ## Page for the live plot of sensor data#####################################
 class LivePlotPage(tk.Frame):
@@ -129,20 +136,24 @@ class LivePlotPage(tk.Frame):
         toolbar.update()
         canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
     def event(self):
+        newLine="\n"
         fileNameOk=False
+        
         while not fileNameOk :   
-            DefaultPath=""
             SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
             for root, dirs, files in os.walk(SettingsDirectory):
                 if 'SettingsFile.txt' in files:
-                    SettingFile=open("SettingsFile.txt","r")
-                    DefaultPath=SettingFile.readline()
-                    fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = DefaultPath ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))   
-            if DefaultPath=="":
-                fileSaveName=filedialog.asksaveasfilename(defaultextension=".csv", initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file",filetypes = (("csv file","*.csv"),("all files","*.*")))
-                SettingsFile=open("SettingsFile.txt","w+")
-                SettingsFile.write(os.path.dirname(fileSaveName))
-            if fileSaveName and fileSaveName[-3:]=="csv" :
+                    with open("SettingsFile.txt","r") as SettingFile:
+                        SettingData=SettingFile.readlines()
+                        if SettingData[0]=="\n":
+                            fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file")
+                            with open("SettingsFile.txt","w+") as SettingFile:
+                                SettingData[0]=os.path.dirname(fileSaveName)+newLine
+                                SettingFile.writelines(SettingData)
+                        else:
+                            fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = SettingData[0] ,title = "Select file2")
+            Extensions=SettingData[2][:-1]
+            if fileSaveName and fileSaveName[-4:] in Extensions :
                     fileNameOk=True
             else:
     #                if not messagebox.askokcancel("Invalid file format", "Please enter a valid file name."):
@@ -178,8 +189,8 @@ class LoadPlotPage(tk.Frame):
                 self.canvas_load.get_tk_widget().destroy()
                 self.slider.destroy()
                 setup_data=loadDataSetup(self)
-                toolbar = NavigationToolbar2Tk(self.canvas_load, self)
-                toolbar.update()    
+#                toolbar = NavigationToolbar2Tk(self.canvas_load, self)
+#                toolbar.update()    
                 self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
                 self.canvas_load.draw()
                 self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
@@ -192,8 +203,8 @@ class LoadPlotPage(tk.Frame):
             setup_data=loadDataSetup(self)
             self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
             self.canvas_load.draw()
-            toolbar = NavigationToolbar2Tk(self.canvas_load, self)
-            toolbar.update()
+#            toolbar = NavigationToolbar2Tk(self.canvas_load, self)
+#            toolbar.update()
             self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
             self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
 #            self.canvas_load.get_tk_widget().grid(row=3,column=0)
@@ -212,48 +223,215 @@ class LoadPlotPage(tk.Frame):
             
 ## Page for the live plot of sensor data#####################################
 class SettingPage(tk.Frame):
-    def __init__(self,parent,controller):
+    def __init__(self,parent):
         tk.Frame.__init__(self,parent)
-        label=ttk.Label(self,text="Page 1",font=LARGE_FONT)
+        self.parent=parent
+        top=self.top=tk.Toplevel(parent)
+        top.title("Settings")
         
-        label.pack()
-        
-        button1=ttk.Button(self, text="Back To home",
-                          command=lambda: controller.show_frame(StartPage))
-        
-        button1.pack()
-        buttonPath=ttk.Button(self, text="default Path",
+        buttonPath=ttk.Button(top, text="Define Default Path",
                           command=lambda: DefinePath(self))
         
-        buttonPath.pack()
-        DefaultPath=""
+        buttonPath.grid(row=2,columnspan=2, pady=10)
+        CreateSettingFile()
         SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
         for root, dirs, files in os.walk(SettingsDirectory):
             if 'SettingsFile.txt' in files:
-                SettingFile=open("SettingsFile.txt","r")
-                DefaultPath=SettingFile.readline()
+                with open("SettingsFile.txt","r") as SettingFile:
+                    SettingData=SettingFile.readlines()
         self.LabelText=tk.StringVar()
+        self.LabelText.set('Path: '+ SettingData[0])
+        self.labelPathName=ttk.Label(top,textvariable=self.LabelText)
+        self.labelPathName.grid(row=3,columnspan=2,pady=10)
+        
+        
+        self.ExtensionText=ttk.Label(top,text='Default save extension')
+        self.ExtensionText.grid(row=4,column=0,pady=10)
+        
+        d = "."
+        optionListTemp =  [d+e for e in SettingData[2].split(d)]
+        optionListTemp[len(optionListTemp)-1]=optionListTemp[len(optionListTemp)-1][:-1]
+        self.optionList=optionListTemp[1:len(optionListTemp)]
+                
+        
+        self.v = tk.StringVar()
+        self.v.set(self.optionList[0])
+        self.ExtensionOptions = ttk.OptionMenu(top, self.v, SettingData[1][:-1], *self.optionList,command=self.DefineExtension)
+        self.ExtensionOptions.grid(row=4,column=1,pady=10)
+        
+        
+        self.addExtensionButton=ttk.Button(top,text="Add extension", command = self.AddExtension)
+        self.addExtensionButton.grid(row=5,column=0,pady=10)
+        
+        self.RemoveExtensionButton=ttk.Button(top,text="Remove extension", command=self.RemoveExtension)
+        self.RemoveExtensionButton.grid(row=5,column=1,pady=10)
+        
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        
+        
+    def event(self):
+        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+        for root, dirs, files in os.walk(SettingsDirectory):
+            if 'SettingsFile.txt' in files:
+                with open("SettingsFile.txt","r") as SettingFile:
+                    DefaultPath=SettingFile.readline()
         self.LabelText.set('Path: '+DefaultPath)
         self.labelPathName=ttk.Label(self,textvariable=self.LabelText)
-        self.labelPathName.pack()
-    def event(self):
-        pass
+    def DefineExtension(self,value):
+        newLine="\n"
+        SettingData=[""]
+        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+        for root, dirs, files in os.walk(SettingsDirectory):
+            if 'SettingsFile.txt' in files:
+                with open("SettingsFile.txt","r") as SettingFile:
+                    SettingData=SettingFile.readlines()
+                    SettingData[1]=value+newLine
+                    with open("SettingsFile.txt","w") as SettingFile:
+                        SettingFile.writelines(SettingData)
+                
+    def AddExtension(self):
+        self.w=AddExtensionWindow(self.parent) 
+        self.master.wait_window(self.w.top)
+        self.top.destroy()
+        PopSettingPage(self)
+    def RemoveExtension(self):
+        self.w=RemoveExtensionWindow(self.parent) 
+        self.master.wait_window(self.w.top)
+        self.DefineExtension
+        self.top.destroy()
+        PopSettingPage(self)
+
+                    
+        
 #### Setup Load data plot ################
+        
+def PopSettingPage(self):
+    self.w=SettingPage(self.master)
+    self.master.wait_window(self.w.top)
+    
+    
+    
+class AddExtensionWindow(object):
+    def __init__(self, parent):
+        top=self.top=tk.Toplevel(parent)
+        self.l=ttk.Label(top,text="Add extension of form: .aaa")
+        self.l.pack()
+        self.e=tk.Entry(top)
+        self.e.pack()
+        self.b=ttk.Button(top,text='Ok',command=self.cleanup)
+        self.b.pack()
+    def cleanup(self):
+        newLine="\n"
+        self.value=self.e.get()
+        if self.value[0]!=".":
+            tk.messagebox.showwarning("Extension Error","Invalide Extension, add ""."" in front of extension name")
+        else:
+            SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+            for root, dirs, files in os.walk(SettingsDirectory):
+                if 'SettingsFile.txt' in files:
+                    with open("SettingsFile.txt","r") as SettingFile:
+                        SettingData=SettingFile.readlines()
+            SettingData[2]=SettingData[2][:-1]+self.value+newLine
+            with open("SettingsFile.txt","w") as SettingFile:
+                SettingFile.writelines(SettingData)
+        self.top.destroy()
+class RemoveExtensionWindow(object):
+    def __init__(self, parent):
+        top=self.top=tk.Toplevel(parent)
+        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+        for root, dirs, files in os.walk(SettingsDirectory):
+            if 'SettingsFile.txt' in files:
+                with open("SettingsFile.txt","r") as SettingFile:
+                    SettingData=SettingFile.readlines()
+        
+        d = "."
+        optionListTemp =  [d+e for e in SettingData[2].split(d)]
+        optionListTemp[len(optionListTemp)-1]=optionListTemp[len(optionListTemp)-1][:-1]
+        self.optionList=optionListTemp[1:len(optionListTemp)]
+        print(self.optionList)
+
+
+        self.l=[None]*len(self.optionList)
+        self.b=[]
+        for k in range(len(self.optionList)):
+            self.b.append(ttk.Button(top,text='Delete extension '+self.optionList[k],command=lambda k=k: self.DeleteExten(k)))
+            self.b[k].grid()
+    def DeleteExten(self,k):
+        newLine="\n"
+
+        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+        for root, dirs, files in os.walk(SettingsDirectory):
+            if 'SettingsFile.txt' in files:
+                with open("SettingsFile.txt","r") as SettingFile:
+                    SettingData=SettingFile.readlines()
+        
+        for x in range(len(self.optionList)):
+            if self.optionList[x]==self.optionList[k]:
+                self.optionList[x]=""
+        print(self.optionList)
+        SettingData[2]=''
+        for i in range(len(self.optionList)):
+            print(SettingData[2])
+            SettingData[2]=SettingData[2]+self.optionList[i]
+        SettingData[2]=SettingData[2]+newLine
+        with open("SettingsFile.txt","w") as SettingFile:
+            SettingFile.writelines(SettingData)
+        self.top.destroy()
+
+def CreateSettingFile():
+    SettingData=[""]
+    newLine="\n"
+    SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+    for root, dirs, files in os.walk(SettingsDirectory):
+            if 'SettingsFile.txt' in files:
+                with open("SettingsFile.txt","r") as SettingFile:
+                    SettingData=SettingFile.readlines()
+            if not SettingData[0]:
+                optionList = ['.csv', '.mat', '.xls']
+                with open("SettingsFile.txt","w+") as SettingFile:
+                    SettingData=[SettingData[0]+newLine,".csv\n",optionList[0]+optionList[1]+optionList[2]+newLine]
+                    SettingFile.writelines(SettingData)
         
 def DefinePath(self):
     self.savePath=filedialog.askdirectory()
-    pathStr='Path: '
-    self.LabelText.set(pathStr+self.savePath)
-    SettingsFile=open("SettingsFile.txt","w+")
-    SettingsFile.write(self.savePath)
+    newLine="\n"
+    if not self.savePath:
+        pass
+    else:    
+        pathStr='Path: '
+        self.LabelText.set(pathStr+self.savePath)
+        SettingData=[""]
+        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+        for root, dirs, files in os.walk(SettingsDirectory):
+            if 'SettingsFile.txt' in files:
+                with open("SettingsFile.txt","r") as SettingFile:
+                    SettingData=SettingFile.readlines()
+        with open("SettingsFile.txt","w+") as SettingsFile:
+            SettingData[0]=self.savePath+newLine
+            SettingsFile.writelines(SettingData)
+    self.top.destroy()
+    PopSettingPage(self)
+
+    
+    
+    
+    
+    
+    
 def loadDataSetup(self):
     global load
-    setup_data=LoadData()
+    Filename=loadFile()
+    setup_data=LoadData(Filename)
     load=True
     return setup_data
-            
-def LoadData():
+
+def loadFile():
     file_path = filedialog.askopenfilename()
+    return file_path
+
+def LoadData(Filename):
+    file_path=Filename
     data = np.genfromtxt(file_path, delimiter=',')
     fig_load=Figure()
     ax=[None]*data.shape[1]
@@ -274,6 +452,24 @@ def LoadData():
     ax[10].set_ylim(0, 1023)
     return[data,fig_load,ax]
     
+def PlotStartPage():
+    fig_StartPage=Figure()
+    ax=[None]*11
+    for k in range(11):
+        ax[k] = fig_StartPage.add_subplot(11, 1, k+1)
+        ax[k].axis([0, 10, 0, 1])
+    ax[0].set_ylim(0, 1023) #Changer pour chaque capteur
+    ax[1].set_ylim(0, 1023)
+    ax[2].set_ylim(0, 1023)
+    ax[3].set_ylim(0, 1023)
+    ax[4].set_ylim(0, 1023)
+    ax[5].set_ylim(0, 1023)
+    ax[6].set_ylim(0, 1023)
+    ax[7].set_ylim(0, 1023)
+    ax[8].set_ylim(0, 1023)
+    ax[9].set_ylim(0, 1023)
+    ax[10].set_ylim(0, 1023)
+    return[fig_StartPage,ax]
     
 ####Setup Live Plot data and update##############
 def setupP(n,fig,ttd):
