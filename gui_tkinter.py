@@ -82,6 +82,7 @@ class PolyleptiqueApp(tk.Tk):
 class StartPage(tk.Frame):
     
     def __init__(self,parent,controller):
+        CreateSettingFile()
         tk.Frame.__init__(self,parent)
         label=tk.Label(self,text="Start Page",font=LARGE_FONT)
         
@@ -145,6 +146,7 @@ class LivePlotPage(tk.Frame):
                 if 'SettingsFile.txt' in files:
                     with open("SettingsFile.txt","r") as SettingFile:
                         SettingData=SettingFile.readlines()
+                        Extensions=SettingData[2][:-1]
                         if SettingData[0]=="\n":
                             fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file")
                             with open("SettingsFile.txt","w+") as SettingFile:
@@ -152,7 +154,7 @@ class LivePlotPage(tk.Frame):
                                 SettingFile.writelines(SettingData)
                         else:
                             fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = SettingData[0] ,title = "Select file2")
-            Extensions=SettingData[2][:-1]
+                
             if fileSaveName and fileSaveName[-4:] in Extensions :
                     fileNameOk=True
             else:
@@ -233,7 +235,7 @@ class SettingPage(tk.Frame):
                           command=lambda: DefinePath(self))
         
         buttonPath.grid(row=2,columnspan=2, pady=10)
-        CreateSettingFile()
+        
         SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
         for root, dirs, files in os.walk(SettingsDirectory):
             if 'SettingsFile.txt' in files:
@@ -349,7 +351,6 @@ class RemoveExtensionWindow(object):
         optionListTemp =  [d+e for e in SettingData[2].split(d)]
         optionListTemp[len(optionListTemp)-1]=optionListTemp[len(optionListTemp)-1][:-1]
         self.optionList=optionListTemp[1:len(optionListTemp)]
-        print(self.optionList)
 
 
         self.l=[None]*len(self.optionList)
@@ -369,10 +370,8 @@ class RemoveExtensionWindow(object):
         for x in range(len(self.optionList)):
             if self.optionList[x]==self.optionList[k]:
                 self.optionList[x]=""
-        print(self.optionList)
         SettingData[2]=''
         for i in range(len(self.optionList)):
-            print(SettingData[2])
             SettingData[2]=SettingData[2]+self.optionList[i]
         SettingData[2]=SettingData[2]+newLine
         with open("SettingsFile.txt","w") as SettingFile:
