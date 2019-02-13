@@ -35,6 +35,7 @@ from tkinter import messagebox
 from Save_values import *
 from real_time_plot import *
 import AcqVerSav_threads
+import graph
 
 from functools import partial
 
@@ -438,17 +439,7 @@ def LoadData(Filename):
         ax[k] = fig_load.add_subplot(data.shape[1], 1, k+1)
         ax[k].axis([0, 10, 0, 1])
         ax[k].plot(np.arange(data.shape[0]-1),data[1:data.shape[0],k],'b')
-    ax[0].set_ylim(0, 1023) #Changer pour chaque capteur
-    ax[1].set_ylim(0, 1023)
-    ax[2].set_ylim(0, 1023)
-    ax[3].set_ylim(0, 1023)
-    ax[4].set_ylim(0, 1023)
-    ax[5].set_ylim(0, 1023)
-    ax[6].set_ylim(0, 1023)
-    ax[7].set_ylim(0, 1023)
-    ax[8].set_ylim(0, 1023)
-    ax[9].set_ylim(0, 1023)
-    ax[10].set_ylim(0, 1023)
+    graph.defineY(ax)
     return[data,fig_load,ax]
     
 def PlotStartPage():
@@ -457,17 +448,7 @@ def PlotStartPage():
     for k in range(11):
         ax[k] = fig_StartPage.add_subplot(11, 1, k+1)
         ax[k].axis([0, 10, 0, 1])
-    ax[0].set_ylim(0, 1023) #Changer pour chaque capteur
-    ax[1].set_ylim(0, 1023)
-    ax[2].set_ylim(0, 1023)
-    ax[3].set_ylim(0, 1023)
-    ax[4].set_ylim(0, 1023)
-    ax[5].set_ylim(0, 1023)
-    ax[6].set_ylim(0, 1023)
-    ax[7].set_ylim(0, 1023)
-    ax[8].set_ylim(0, 1023)
-    ax[9].set_ylim(0, 1023)
-    ax[10].set_ylim(0, 1023)
+    graph.defineY(ax)
     return[fig_StartPage,ax]
     
 ####Setup Live Plot data and update##############
@@ -484,18 +465,7 @@ def setupP(n,fig,ttd):
         
         linek, = ax[k].plot(xs, ys[k])
         line[k]=linek
-        
-    ax[0].set_ylim(0, 1023) #Changer pour chaque capteur
-    ax[1].set_ylim(0, 1023)
-    ax[2].set_ylim(0, 1023)
-    ax[3].set_ylim(0, 1023)
-    ax[4].set_ylim(0, 1023)
-    ax[5].set_ylim(0, 1023)
-    ax[6].set_ylim(0, 1023)
-    ax[7].set_ylim(0, 1023)
-    ax[8].set_ylim(0, 1023)
-    ax[9].set_ylim(0, 1023)
-    ax[10].set_ylim(0, 1023)
+    graph.defineY(ax)
     
     
     
@@ -538,7 +508,7 @@ frameCounter = 1
 samplingRate = 1000 #in Hz
 timeToDisplay = 1 #in s
 saveFrequency = 10 #in seconds
-nbIntegrityWorkers=2
+nbIntegrityWorkers=1
 qSize = 100000
 
 a=setupP(nbChannel,fig,timeToDisplay*samplingRate)
