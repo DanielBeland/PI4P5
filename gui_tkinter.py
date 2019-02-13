@@ -218,7 +218,7 @@ class LoadPlotPage(tk.Frame):
     def update_ax(self,data,fig_load,ax):
         pos=self.slider.get()
         for k in range(data.shape[1]):
-            ax[k].set_xlim(pos,pos+10)
+            ax[k].set_xlim(pos,pos+1000)
             fig_load.canvas.draw_idle()
             
             
@@ -272,6 +272,9 @@ class SettingPage(tk.Frame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         
+        self.okButton=ttk.Button(top,text="Ok", command=self.ExitSetting)
+        self.okButton.grid(columnspan=2, pady=10)
+        
         
     def event(self):
         SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
@@ -304,7 +307,8 @@ class SettingPage(tk.Frame):
         self.DefineExtension
         self.top.destroy()
         PopSettingPage(self)
-
+    def ExitSetting(self):
+        self.top.destroy()
                     
         
 #### Setup Load data plot ################
@@ -433,22 +437,30 @@ def loadFile():
 def LoadData(Filename):
     file_path=Filename
     data = np.genfromtxt(file_path, delimiter=',')
-    fig_load=Figure()
+    fig_load=Figure(figsize=(10,7))
     ax=[None]*data.shape[1]
     for k in range(data.shape[1]):
         ax[k] = fig_load.add_subplot(data.shape[1], 1, k+1)
-        ax[k].axis([0, 10, 0, 1])
+        ax[k].axis([0, 1000, 0, 1])
         ax[k].plot(np.arange(data.shape[0]-1),data[1:data.shape[0],k],'b')
+        ax[k].get_xaxis().set_visible(False)
+        if k==data.shape[1]-1:
+            ax[k].get_xaxis().set_visible(True)
+    fig_load.subplots_adjust(hspace = .3)
     graph.defineY(ax)
+    graph.defineTitle(ax)
     return[data,fig_load,ax]
     
 def PlotStartPage():
-    fig_StartPage=Figure()
+    fig_StartPage=Figure(figsize=(10,7))
+
     ax=[None]*11
     for k in range(11):
         ax[k] = fig_StartPage.add_subplot(11, 1, k+1)
-        ax[k].axis([0, 10, 0, 1])
+        ax[k].get_xaxis().set_visible(False)
+    graph.defineTitle(ax)
     graph.defineY(ax)
+    fig_StartPage.subplots_adjust(hspace=0.3)
     return[fig_StartPage,ax]
     
 ####Setup Live Plot data and update##############
@@ -462,10 +474,13 @@ def setupP(n,fig,ttd):
     for k in range(n):
         ax[k] = fig.add_subplot(n, 1, k+1)
         ys[k] = deque([0]*ttd)
+        ax[k].get_xaxis().set_visible(False)
         
         linek, = ax[k].plot(xs, ys[k])
         line[k]=linek
     graph.defineY(ax)
+    graph.defineTitle(ax)
+    fig.subplots_adjust(hspace=0.3)
     
     
     
@@ -494,7 +509,7 @@ def on_closing():
 global load
 LARGE_FONT=("Verdana",12)
 style.use("ggplot")
-fig = Figure(figsize=(5,5), dpi=100)
+fig = Figure(figsize=(10,7), dpi=100)
 
 load=False
 
