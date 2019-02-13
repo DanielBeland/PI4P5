@@ -20,7 +20,7 @@ def defineY(axs):
         axs[i].set_ylim(yaxis[i])
     return axs
 
-#preinitiate ecgData and ecgFreq as [0]*n
+#preinitiate ecgData and ecgFreq as [0]*n, n must be an odd number
 def prepECG(ecgData, ecgFreq, previousVal,previousTime, newData, newTime):
 #    FIFO and median to remove spikes
     ecgData.popleft()
@@ -42,10 +42,11 @@ def prepEMG(emgData,newData):
 #preinitiate accData as [[300,300]]*n or [[300,300,300]]*n
 def prepACC(accData,newData):
     accData.popleft()
-    accData.append()
-    for i in len(newData):
-        Data[i]=newData[i]-statistics.mean(accData[:][i])
-    return Data
+    accData.append(newData)
+    Data=np.zeros((len(newData)), dtype=int)
+    for i in range(len(newData)):
+        Data[i]=newData[i]-statistics.mean([k[i] for k in accData])
+    return [accData,np.linalg.norm(Data)]
 
 #preinitiate rData as [0]*1000
 def prepR(rData, newData):
@@ -54,6 +55,6 @@ def prepR(rData, newData):
     rData.append(newData)
     data=abs((np.fft.fft(rData)).imag)
     freq = np.fft.fftfreq((np.arange(1000)).shape[-1])
-    return [rData, abs(freq[np.argmax(data)])*10] #replace 10 with conversion factor for Hz
+    return [rData, abs(freq[np.argmax(data)])*100] #replace 10 with conversion factor for Hz
     
     

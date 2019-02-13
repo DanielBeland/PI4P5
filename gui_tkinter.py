@@ -162,6 +162,7 @@ class LivePlotPage(tk.Frame):
     #                if not messagebox.askokcancel("Invalid file format", "Please enter a valid file name."):
                 break
         if fileNameOk:
+            
             AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(fileSaveName, nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
         pass
     
