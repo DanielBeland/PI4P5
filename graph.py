@@ -14,7 +14,12 @@ minEDA = 0
 maxEDA = 1023
 
 yaxis=[(minECG,maxECG),(minEMG,maxEMG),(minEMG,maxEMG),(minEMG,maxEMG),(minEMG,maxEMG),(minACC,maxACC),(minACC,maxACC),(minACC,maxACC),(minACC,maxACC),(minR,maxR),(minEDA,maxEDA)]
-
+title=["ECG","EMG","EMG","EMG","EMG","ACC","ACC","ACC","ACC","RES","EDA"]
+def defineTitle(axs):
+    
+    for i in range(len(axs)):
+        axs[i].set_ylabel(title[i], rotation=0, fontsize=15, labelpad=20)
+    return axs
 def defineY(axs):
     for i in range(len(axs)):
         axs[i].set_ylim(yaxis[i])
