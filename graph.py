@@ -47,22 +47,13 @@ def prepACC(accData,newData):
         Data[i]=newData[i]-statistics.mean(accData[:][i])
     return Data
 
-
-def prepR(previousVal,previousTime, rCounter, newData, newTime):
+#preinitiate rData as [0]*1000
+def prepR(rData, newData):
 #    FIFO and median to remove spikes
     rData.popleft()
     rData.append(newData)
-    newVal=statistics.median(rData)
-#    Rising edge detection
-    if newVal > previousVal:
-        rCounter=rCounter+1
-    else:
-        a
-    if rCounter==3:
-        rCounter=0
-        period=newTime-previousTime #à convertir en secondes
-        rFreq.popleft()
-        rFreq.append(1/period)
-    return [newVal,newTime,statistics.mean(rFreq)]
+    data=abs((np.fft.fft(rData)).imag)
+    freq = np.fft.fftfreq((np.arange(1000)).shape[-1])
+    return [rData, abs(freq[np.argmax(data)])*10] #replace 10 with conversion factor for Hz
     
     
