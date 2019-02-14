@@ -52,7 +52,7 @@ class PolyleptiqueApp(tk.Tk):
         
         tk.Tk.__init__(self,*args,**kwargs)
 #        tk.Tk.wm_iconbitmap(self,default="logo.ico")
-        tk.Tk.wm_title(self, "Polyleptique")
+        tk.Tk.wm_title(self, "Alpha Version")
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
         container.grid_rowconfigure(0, weight=1)
@@ -85,7 +85,7 @@ class StartPage(tk.Frame):
     def __init__(self,parent,controller):
         CreateSettingFile()
         tk.Frame.__init__(self,parent)
-        label=tk.Label(self,text="Start Page",font=LARGE_FONT)
+        label=tk.Label(self,text="Epileptic Patient Monitoring",font=LARGE_FONT)
         
         label.pack(pady=10,padx=10)
         
@@ -116,19 +116,20 @@ class StartPage(tk.Frame):
 class LivePlotPage(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
-        label=ttk.Label(self,text="Page 1",font=LARGE_FONT)
+        label=ttk.Label(self,text="Epileptic Patient Monitoring",font=LARGE_FONT)
         
         label.pack(pady=10,padx=10)
-        
-        button1=ttk.Button(self, text="Back To home",
-                          command=lambda: controller.show_frame(StartPage))
-        
-        button1.pack()
         
         button2=ttk.Button(self, text="Create/Select save file",
                           command=lambda: controller.show_frame(LivePlotPage))
         
         button2.pack()
+        
+        button1=ttk.Button(self, text="Back to home",
+                          command=lambda: controller.show_frame(StartPage))
+        
+        button1.pack()
+        
         
         canvas = FigureCanvasTkAgg(fig, self)
         canvas.draw()
@@ -171,12 +172,12 @@ class LoadPlotPage(tk.Frame):
     def __init__(self,parent,controller):
 
         tk.Frame.__init__(self,parent)
-        label=ttk.Label(self,text="Page 2",font=LARGE_FONT)
+        label=ttk.Label(self,text="Epileptic Patient Monitoring",font=LARGE_FONT)
         
         label.pack(pady=10,padx=10)
 #        label.grid(row=1,column=0)
         
-        button1=ttk.Button(self, text="Back To home",
+        button1=ttk.Button(self, text="Back to home",
                           command=lambda: controller.show_frame(StartPage))
         
         button1.pack()

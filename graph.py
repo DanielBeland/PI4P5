@@ -2,7 +2,7 @@ from collections import deque
 import numpy as np
 
 minECG = 0
-maxECG = 200
+maxECG = 2
 minEMG = -250
 maxEMG = 250
 minACC = 0
@@ -31,13 +31,16 @@ def prepECG(ecgData, ecgFreq, previousVal,previousTime, newData, newTime):
     if newVal > previousVal:
         period=newTime-previousTime #à convertir en secondes
         ecgFreq.popleft()
-        ecgFreq.append(1/period)
+        ecgFreq.append(1/(period+1))
     return [ecgData,ecgFreq,newVal,newTime,np.mean(ecgFreq)]
 
 #preinitite emgData as [250]*n
 def prepEMG(emgData,newData):
     emgData.popleft()
     emgData.append(newData)
+#    print(newData)
+#    print(emgData)
+#    print(np.mean(emgData))
     return [emgData,newData-np.mean(emgData)]
     
 #preinitiate accData as [[300,300]]*n or [[300,300,300]]*n
@@ -64,3 +67,12 @@ def defineTitle(axs):
     for i in range(len(axs)):
         axs[i].set_ylabel(title[i], rotation=0, fontsize=15, labelpad=20)
     return axs
+
+if __name__ == '__main__':
+    processedData=[]
+    emgData1=deque([250]*1000)
+    data=[400]*1500
+    for i in range(1100):
+        [emgData1,processedData]=prepEMG(emgData1,data[i])
+#        print(emgData1)
+        print(processedData)

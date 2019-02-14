@@ -58,31 +58,34 @@ def worker_acquisition(q_raw,nbChannel,select_file_lock):
     ser = serial.Serial()
     ser.baudrate = 9600
     ser.timeout = 2
-#    while True:
-#        port='COM11'
-#        ser.port = port
-#        ser.open()
-#        break
+    while True:
+        port='COM8'
+        ser.port = port
+        ser.open()
+        break
 #    data=np.zeros((nbChannel), dtype=int)
     if select_file_lock.acquire():
         i=0
         while not t.shutdown_flag.is_set():
             # Acquire
-            data=np.zeros((nbChannel), dtype=int)
+#            print(q_raw.qsize())
+            data=np.zeros((nbChannel+7), dtype=int)
     #        data = np.random.randint(100,size=(11), dtype=int)
             # Delay to emulate the Bluetooth API call
-    #        dataRaw=ser.readline().split(b',')
-    #        data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
+            dataRaw=ser.readline().split(b',')
+            data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
     
-            data=np.zeros((nbChannel+7), dtype=int)
+#            data=np.zeros((nbChannel+7), dtype=int)
             i=i+1
 #           Formated Data
-            data[0] = np.random.randint(2, dtype=int)
-            data[1:5] = np.random.randint(500, size=4,dtype=int)
-            data[5:15] = np.random.randint(0,1000, size=10,dtype=int)
-            data[15]= np.random.randint(50,100,dtype=int)
-            data[16]= np.random.randint(0,1023,dtype=int)
+#            
+#            data[0] = np.random.randint(2, dtype=int)
+#            data[1:5] = np.random.randint(500, size=4,dtype=int)
+#            data[5:15] = np.random.randint(0,1000, size=10,dtype=int)
+#            data[15]= np.random.randint(50,100,dtype=int)
+#            data[16]= np.random.randint(0,1023,dtype=int)
             data[17] = i
+            
 #            print(data)
 #            time.sleep(0.001)
             # Enqueue
@@ -111,6 +114,7 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
         try:
             # Dequeue raw
             data = q_raw.get(block=False)
+#            print(data)
             q_raw.task_done() #necessary for multithreaded operations on Queue
         except Empty:
             if firstTime:
@@ -159,7 +163,7 @@ def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize,fileSav
     while not t.shutdown_flag.is_set(): 
         time.sleep(1)
         curr_size = q_processed.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
-        print(curr_size)
+#        print(curr_size)
         if curr_size > saveSize:
             data=np.zeros((curr_size,nbChannel), dtype=int)
             for i in range(curr_size):
