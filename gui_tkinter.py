@@ -527,7 +527,7 @@ nbIntegrityWorkers=1
 qSize = 100000
 
 a=setupP(nbChannel,fig,timeToDisplay*samplingRate)
-ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=1000/samplingRate, blit=True)
+ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=10/samplingRate, blit=True)
 
 #gui = Thread(target=gui_t, args=(root,), name="GUI")
 #tStart(gui)
