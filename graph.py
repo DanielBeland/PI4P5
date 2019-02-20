@@ -3,8 +3,8 @@ import numpy as np
 
 minECG = 0
 maxECG = 2
-minEMG = -250
-maxEMG = 250
+minEMG = -500
+maxEMG = 500
 minACC = 0
 maxACC = 1000
 minR = 0

@@ -58,32 +58,30 @@ def worker_acquisition(q_raw,nbChannel,select_file_lock):
     ser = serial.Serial()
     ser.baudrate = 9600
     ser.timeout = 2
-    while True:
-        port='COM8'
-        ser.port = port
-        ser.open()
-        break
-#    data=np.zeros((nbChannel), dtype=int)
+#    while True:
+#        port='COM8'
+#        ser.port = port
+#        ser.open()
+#        break
     if select_file_lock.acquire():
         i=0
         while not t.shutdown_flag.is_set():
             # Acquire
 #            print(q_raw.qsize())
             data=np.zeros((nbChannel+7), dtype=int)
-    #        data = np.random.randint(100,size=(11), dtype=int)
-            # Delay to emulate the Bluetooth API call
-            dataRaw=ser.readline().split(b',')
-            data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
+#            dataRaw=ser.readline().split(b',')
+#            data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
     
 #            data=np.zeros((nbChannel+7), dtype=int)
             i=i+1
+            
 #           Formated Data
-#            
-#            data[0] = np.random.randint(2, dtype=int)
-#            data[1:5] = np.random.randint(500, size=4,dtype=int)
-#            data[5:15] = np.random.randint(0,1000, size=10,dtype=int)
-#            data[15]= np.random.randint(50,100,dtype=int)
-#            data[16]= np.random.randint(0,1023,dtype=int)
+            
+            data[0] = np.random.randint(2, dtype=int)
+            data[1:5] = np.random.randint(500, size=4,dtype=int)
+            data[5:15] = np.random.randint(0,1000, size=10,dtype=int)
+            data[15]= np.random.randint(50,100,dtype=int)
+            data[16]= np.random.randint(0,1023,dtype=int)
             data[17] = i
             
 #            print(data)
@@ -100,14 +98,14 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
     ecgFreq=deque([0]*3)
     previousVal=0
     previousTime=0
-    emgData1=deque([250]*1000)
-    emgData2=deque([250]*1000)
-    emgData3=deque([250]*1000)
-    emgData4=deque([250]*1000)
-    accData1=deque([[300,300,300]]*1000)
-    accData2=deque([[300,300,300]]*1000)
-    accData3=deque([[300,300]]*1000)
-    accData4=deque([[300,300]]*1000)
+    emgData1=deque([500]*100)
+    emgData2=deque([500]*100)
+    emgData3=deque([500]*100)
+    emgData4=deque([500]*100)
+    accData1=deque([[300,300,300]]*100)
+    accData2=deque([[300,300,300]]*100)
+    accData3=deque([[300,300]]*100)
+    accData4=deque([[300,300]]*100)
     rData=deque([0]*1000)
     freqX=np.fft.fftfreq((np.arange(1000)).shape[-1])
     while not t.shutdown_flag.is_set():
@@ -143,6 +141,22 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
         [accData4, processedData[8]]=prepACC(accData4,data[13:15])
         [rData, processedData[9]]=prepR(rData, data[15])
         processedData[10] = data[16]
+#        print('')
+#        print(np.linalg.norm(data[5:8]))
+#        print(np.mean(accData1))
+#        print(processedData[5])
+#        print('')
+#        processedData[0]=data[0]
+#        processedData[1]=data[1]-500
+#        processedData[2]=data[2]-500
+#        processedData[3]=data[3]-500
+#        processedData[4]=data[4]-500
+#        processedData[5]=np.linalg.norm(data[5:8])
+#        processedData[6]=np.linalg.norm(data[8:11])
+#        processedData[7]=np.linalg.norm(data[11:13])
+#        processedData[8]=np.linalg.norm(data[13:15])
+#        processedData[9]=data[15]
+#        processedData[10]=data[16]
         if lock.acquire(blocking=False): # If lock is taken don't block just pass
             latest_data_point = processedData
 #            print(latest_data_point)
@@ -163,7 +177,7 @@ def worker_write_to_file(q_processed,nbChannel,select_file_lock,saveSize,fileSav
     while not t.shutdown_flag.is_set(): 
         time.sleep(1)
         curr_size = q_processed.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
-#        print(curr_size)
+        print(curr_size)
         if curr_size > saveSize:
             data=np.zeros((curr_size,nbChannel), dtype=int)
             for i in range(curr_size):
