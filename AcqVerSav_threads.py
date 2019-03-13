@@ -30,6 +30,7 @@ from tkinter import messagebox
 from Save_values import *
 from real_time_plot import *
 
+state=[0,0]
 latest_data_point = []
 thread_list = []
 
@@ -109,6 +110,7 @@ def worker_integrity_check(q_raw, q_processed, lock, nbChannel):
         q_processed.put(data)
     if lock.acquire(blocking=False): # If lock is taken don't block just pass
         latest_data_point = np.zeros((nbChannel), dtype=int)
+        state=[np.random.randint(0,2),np.random.randint(0,2)]
 #            print(latest_data_point)
         lock.release()
 

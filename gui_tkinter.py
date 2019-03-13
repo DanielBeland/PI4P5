@@ -647,6 +647,7 @@ ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],
 #gui = Thread(target=gui_t, args=(root,), name="GUI")
 #tStart(gui)
 
+
 root.mainloop()
 
 
