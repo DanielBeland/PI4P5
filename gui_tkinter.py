@@ -5,13 +5,10 @@ Created on Wed Jan 16 14:42:00 2019
 @author: Olivier
 """
 import random
-import time
 import serial
 import sys
-import datetime as dt
 import os
 import inspect
-import matplotlib
 #matplotlib.use("TkAgg")
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -19,7 +16,6 @@ from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
 import numpy as np
-import matplotlib.pyplot as plt
 
 from queue import Queue, Empty, Full
 from threading import Thread, Lock, current_thread
@@ -37,9 +33,14 @@ from real_time_plot import *
 import AcqVerSav_threads
 import graph
 
-from functools import partial
-
-
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.linecharts import HorizontalLineChart
+from reportlab.graphics.charts.lineplots import LinePlot
+from reportlab.graphics.widgets.markers import makeMarker
+from reportlab.platypus import *
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.rl_config import defaultPageSize
+from reportlab.lib.units import inch
 
 
 
@@ -52,7 +53,7 @@ class PolyleptiqueApp(tk.Tk):
         
         tk.Tk.__init__(self,*args,**kwargs)
 #        tk.Tk.wm_iconbitmap(self,default="logo.ico")
-        tk.Tk.wm_title(self, "Alpha Version")
+        tk.Tk.wm_title(self, "Polyleptique")
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
         container.grid_rowconfigure(0, weight=1)
@@ -60,7 +61,7 @@ class PolyleptiqueApp(tk.Tk):
         
         self.frames= {}
         
-        for F in (StartPage, LivePlotPage, LoadPlotPage):
+        for F in (StartPage, LivePlotPage):
         
             frame = F(container, self)
             
@@ -85,7 +86,7 @@ class StartPage(tk.Frame):
     def __init__(self,parent,controller):
         CreateSettingFile()
         tk.Frame.__init__(self,parent)
-        label=tk.Label(self,text="Epileptic Patient Monitoring",font=LARGE_FONT)
+        label=tk.Label(self,text="Start Page",font=LARGE_FONT)
         
         label.pack(pady=10,padx=10)
         
@@ -94,8 +95,8 @@ class StartPage(tk.Frame):
         
         button_new.pack()
         
-        button_load=ttk.Button(self, text="Load previous data",
-                              command=lambda: controller.show_frame(LoadPlotPage))
+        button_load=ttk.Button(self, text="Create Summary",
+                              command=lambda: Rapport())
         button_load.pack() 
         button_Setting=ttk.Button(self, text="Settings",
                               command=lambda: PopSettingPage(self))
@@ -116,20 +117,19 @@ class StartPage(tk.Frame):
 class LivePlotPage(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
-        label=ttk.Label(self,text="Epileptic Patient Monitoring",font=LARGE_FONT)
+        label=ttk.Label(self,text="Page 1",font=LARGE_FONT)
         
         label.pack(pady=10,padx=10)
+        
+        button1=ttk.Button(self, text="Back To home",
+                          command=lambda: controller.show_frame(StartPage))
+        
+        button1.pack()
         
         button2=ttk.Button(self, text="Create/Select save file",
                           command=lambda: controller.show_frame(LivePlotPage))
         
         button2.pack()
-        
-        button1=ttk.Button(self, text="Back to home",
-                          command=lambda: controller.show_frame(StartPage))
-        
-        button1.pack()
-        
         
         canvas = FigureCanvasTkAgg(fig, self)
         canvas.draw()
@@ -166,62 +166,154 @@ class LivePlotPage(tk.Frame):
             AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(fileSaveName, nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
         pass
     
+    ########### CREATE SUMMARY#################
+    
+def Rapport():
+    PAGE_HEIGHT=defaultPageSize[1]
+    styles=getSampleStyleSheet()
+    Title="Rapport de la session d'enregistrement"
+    Elements=[]
+    HeaderStyle=styles["Heading1"]
+    CapteurStyle=styles["Heading2"]
+    ParaStyle=styles["Normal"]
+    PreStyle=styles["Code"]
+    capteur=["ECG","EMG bras droite","EMG bras gauche","EMG jambe droite","EMG jambe gauche","Accéléromètre bras droite","Accéléromètre bras gauche","Accéléromètre jambe droite","Accéléromètre jambe gauche","Respiration","EDA"]
+    def header(txt, style=HeaderStyle, klass=Paragraph, sep=0.3):
+        s=Spacer(0.2*inch, sep*inch)
+        para=klass(txt,style)
+        sect=[s,para]
+        result=KeepTogether(sect)
+        return result
+    def graphout(data):
+        drawing = Drawing(400, 200)
+        lp = LinePlot()
+        lp.x = 50
+        lp.y = 50
+        lp.height = 125
+        lp.width = 300
+        lp.data = data
+        lp.joinedLines = 1
+        lp.lines[0].symbol = makeMarker('FilledCircle')
+    #    lp.lines[1].symbol = makeMarker('Circle')
+        lp.lineLabelFormat = '%2.0f'
+        #lp.strokeColor = colors.black
+    #    lp.xValueAxis.valueMin = 0
+    #    lp.xValueAxis.valueMax = 300
+    #    lp.xValueAxis.valueSteps = [1, 2, 2.5, 3, 4, 5]
+        lp.xValueAxis.labelTextFormat = '%2.1f'
+    #    lp.yValueAxis.valueMin = 0
+    #    lp.yValueAxis.valueMax = 1
+    #    lp.yValueAxis.valueSteps = [1, 2, 3, 5, 6]
+        drawing.add(lp)
+        return drawing
+    def select_file():
+        root = tk.Tk()
+        root.withdraw()
+    
+        file_path = filedialog.askopenfilename()
+        data = np.genfromtxt(file_path, delimiter=',')
+        return [data, file_path]
+    
+    def go(file_path):
+        GenName='Rapport'
+        PatientName=os.path.basename(file_path)[:-4]
+        SummaryName=GenName+'_'+PatientName+'.pdf'
+        doc=SimpleDocTemplate(SummaryName)
+        doc.build(Elements)
+        
+    myTitle=header(Title)
+    info=[myTitle]
+    Elements.extend(info)
+    [data,file_path]=select_file()
+    for i in range(11):
+        Capteur=header(capteur[i], sep=0.1, style=CapteurStyle)
+        meanData=header('Mean='+str(np.mean(data[1:data.shape[0],i])), sep=0.1, style=ParaStyle)
+        stdData=header('Standard Deviation='+str(np.std(data[1:data.shape[0],i])), sep=0.1, style=ParaStyle)
+        minData=header('Minimum='+str(np.min(data[1:data.shape[0],i])), sep=0.1, style=ParaStyle)
+        maxData=header('Maximum='+str(np.max(data[1:data.shape[0],i])), sep=0.1, style=ParaStyle)
+        ydata=[]
+        xdata=[]
+        data_graph=[]
+    
+            
+        xdata=np.arange(data.shape[0]-1)
+        ydata=data[1:data.shape[0],i]
+        data_graph = [tuple(zip(xdata,ydata))]
+        graph = graphout(data_graph)
+        info_capteur=[Capteur, meanData,stdData,maxData,minData,graph]
+        Elements.extend(info_capteur)
+    
+    go(file_path)
+    
+    
 ## Page for the loaded data plot #########################
         
-class LoadPlotPage(tk.Frame):
-    def __init__(self,parent,controller):
-
-        tk.Frame.__init__(self,parent)
-        label=ttk.Label(self,text="Epileptic Patient Monitoring",font=LARGE_FONT)
-        
-        label.pack(pady=10,padx=10)
-#        label.grid(row=1,column=0)
-        
-        button1=ttk.Button(self, text="Back to home",
-                          command=lambda: controller.show_frame(StartPage))
-        
-        button1.pack()
-#        button1.grid(row=2,column=0)
-        
-        
-    def event(self):
-
-            
-        if load==True:
-            MsgBox=tk.messagebox.askquestion("New Data","Do you want to load new data?")
-            if MsgBox=='yes':
-                self.canvas_load.get_tk_widget().destroy()
-                self.slider.destroy()
-                setup_data=loadDataSetup(self)
-#                toolbar = NavigationToolbar2Tk(self.canvas_load, self)
-#                toolbar.update()    
-                self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
-                self.canvas_load.draw()
-                self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-                self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-                self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL,length=600, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
-                self.slider.pack()
-            else:
-                pass
-        else:
-            setup_data=loadDataSetup(self)
-            self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
-            self.canvas_load.draw()
-#            toolbar = NavigationToolbar2Tk(self.canvas_load, self)
-#            toolbar.update()
-            self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-            self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-#            self.canvas_load.get_tk_widget().grid(row=3,column=0)
-            
-            self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL, length=600, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
-            self.slider.pack() 
-#            self.slider.grid(column=0,row=4) 
-    def update_ax(self,data,fig_load,ax):
-        pos=self.slider.get()
-        for k in range(data.shape[1]):
-            ax[k].set_xlim(pos,pos+1000)
-            fig_load.canvas.draw_idle()
-            
+#class LoadPlotPage(tk.Frame):
+#    def __init__(self,parent,controller):
+#        n=11
+#        tk.Frame.__init__(self,parent)
+#        label=ttk.Label(self,text="Page 2",font=LARGE_FONT)
+#        
+#        label.pack(pady=10,padx=10)
+#        button1=ttk.Button(self, text="Back To home",
+#                          command=lambda: controller.show_frame(StartPage))
+#        
+#        button1.pack()
+#        
+#        notebook=ttk.Notebook(self)
+#        self.frame=[None]*n
+#        for k in range(n):
+#            self.frame[k]=ttk.Frame(notebook)
+#            TabName=graph.TabName(k)
+#            notebook.add(self.frame[k], text=TabName)
+#        notebook.pack()
+#
+##        label.grid(row=1,column=0)
+#        
+#
+##        button1.grid(row=2,column=0)
+#    
+#        
+#    def event(self):
+#            
+#        if load==True:
+#            MsgBox=tk.messagebox.askquestion("New Data","Do you want to load new data?")
+#            if MsgBox=='yes':
+#                self.canvas_load.get_tk_widget().destroy()
+#                self.slider.destroy()
+#                setup_data=loadDataSetup(self)
+##                toolbar = NavigationToolbar2Tk(self.canvas_load, self)
+##                toolbar.update()    
+#                self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
+#                self.canvas_load.draw()
+#                self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+#                self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+#                self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL,length=600, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
+#                self.slider.pack()
+#            else:
+#                pass
+#        else:
+#            setup_data=loadDataSetup(self)
+#            self.canvas_load=[None]*setup_data[0].shape[1]
+#            self.slider=[None]*setup_data[0].shape[1]
+#            for k in range(setup_data[0].shape[1]):
+#                self.canvas_load[k] = FigureCanvasTkAgg(setup_data[1], self.frame[k])
+#                self.canvas_load[k].draw()
+#                
+##            toolbar = NavigationToolbar2Tk(self.canvas_load, self)
+##            toolbar.update()
+#                self.canvas_load[k].get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+#                self.canvas_load[k]._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+##            self.canvas_load.get_tk_widget().grid(row=3,column=0)
+#            
+#                self.slider[k] = Scale(self.frame[k], from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL, length=600, command=lambda k=k: self.update_ax(k))
+#                self.slider[k].pack() 
+##            self.slider.grid(column=0,row=4) 
+#    def update_ax(self,k):
+#        print(k)
+##        ax.set_xlim(pos,pos+1000)
+##        fig_load.canvas_load.draw_idle()
+#            
             
             
             
@@ -393,9 +485,9 @@ def CreateSettingFile():
                 with open("SettingsFile.txt","r") as SettingFile:
                     SettingData=SettingFile.readlines()
             if not SettingData[0]:
-                optionList = ['.csv', '.mat', '.xls']
+                optionList = ['.dat', '.csv', '.mat', '.xls']
                 with open("SettingsFile.txt","w+") as SettingFile:
-                    SettingData=[SettingData[0]+newLine,".csv\n",optionList[0]+optionList[1]+optionList[2]+newLine]
+                    SettingData=[SettingData[0]+newLine,".dat\n",optionList[0]+optionList[1]+optionList[2]+newLine]
                     SettingFile.writelines(SettingData)
         
 def DefinePath(self):
@@ -439,18 +531,25 @@ def LoadData(Filename):
     file_path=Filename
     data = np.genfromtxt(file_path, delimiter=',')
     fig_load=Figure(figsize=(10,7))
-    ax=[None]*data.shape[1]
-    for k in range(data.shape[1]):
-        ax[k] = fig_load.add_subplot(data.shape[1], 1, k+1)
-        ax[k].axis([0, 1000, 0, 1])
-        ax[k].plot(np.arange(data.shape[0]-1),data[1:data.shape[0],k],'b')
-        ax[k].get_xaxis().set_visible(False)
-        if k==data.shape[1]-1:
-            ax[k].get_xaxis().set_visible(True)
+    ax = fig_load.add_subplot(data.shape[1], 1, 1)
+    ax.axis([0, 1000, 0, 1])
+    ax.plot(np.arange(data.shape[0]-1),data[1:data.shape[0],0],'b')
+    ax.get_xaxis().set_visible(False)
     fig_load.subplots_adjust(hspace = .3)
-    graph.defineY(ax)
-    graph.defineTitle(ax)
     return[data,fig_load,ax]
+    
+    #ax=[None]*11
+#    for k in range(data.shape[1]):
+#        ax[k] = fig_load.add_subplot(data.shape[1], 1, k+1)
+#        ax[k].axis([0, 1000, 0, 1])
+#        ax[k].plot(np.arange(data.shape[0]-1),data[1:data.shape[0],k],'b')
+#        ax[k].get_xaxis().set_visible(False)
+#        if k==data.shape[1]-1:
+#            ax[k].get_xaxis().set_visible(True)
+#    fig_load.subplots_adjust(hspace = .3)
+#    graph.defineY(ax)
+#    graph.defineTitle(ax)
+#    return[data,fig_load,ax]
     
 def PlotStartPage():
     fig_StartPage=Figure(figsize=(10,7))
@@ -494,6 +593,21 @@ def animate(frameCounter,ax,xs,ys,lines,n):
         
         ys[l].popleft()
         ys[l].append(AcqVerSav_threads.latest_data_point[l])
+        if l==1:
+            if np.mean(ys)>510:
+                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
+        if l==2 or l==3 or l==4 or l==5:
+            if np.mean(ys)>510:
+                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
+        if l==6 or l==7 or l==8 or l==9:
+            if np.mean(ys)>510:
+                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
+        if l==10:
+            if np.mean(ys)>510:
+                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
+        if l==11:
+            if np.mean(ys)>510:
+                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
 
         lines[l].set_xdata(xs)
         lines[l].set_ydata(ys[l])
@@ -528,7 +642,7 @@ nbIntegrityWorkers=1
 qSize = 100000
 
 a=setupP(nbChannel,fig,timeToDisplay*samplingRate)
-ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=10/samplingRate, blit=True)
+ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=1000/samplingRate, blit=True)
 
 #gui = Thread(target=gui_t, args=(root,), name="GUI")
 #tStart(gui)
