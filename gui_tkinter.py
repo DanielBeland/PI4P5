@@ -9,7 +9,6 @@ import serial
 import sys
 import os
 import inspect
-#matplotlib.use("TkAgg")
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
@@ -43,7 +42,9 @@ from reportlab.rl_config import defaultPageSize
 from reportlab.lib.units import inch
 
 
-
+from PIL import ImageTk, Image
+import time
+starttime=time.time()
 
 
 class PolyleptiqueApp(tk.Tk):
@@ -52,25 +53,26 @@ class PolyleptiqueApp(tk.Tk):
         
         
         tk.Tk.__init__(self,*args,**kwargs)
-#        tk.Tk.wm_iconbitmap(self,default="logo.ico")
+        tk.Tk.wm_iconbitmap(self,default="logo.ico")
         tk.Tk.wm_title(self, "Polyleptique")
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
-        
+
         self.frames= {}
         
-        for F in (StartPage, LivePlotPage):
+        for F in (StartPage, RecordingPage):
         
             frame = F(container, self)
             
             self.frames[F] = frame
-            
             frame.grid(row=0,column=0,sticky="nsew")
             
         
         self.show_frame(StartPage)
+        page_name = RecordingPage.__name__
+        self.frames[page_name] = frame
         
     def show_frame(self, cont):
             
@@ -78,20 +80,24 @@ class PolyleptiqueApp(tk.Tk):
         frame.tkraise()
         frame.event()
     
-        
+    def get_page(self, page_name):
+        return self.frames[page_name]
         
 ## Starting page, openend when app is launched################################3
 class StartPage(tk.Frame):
     
     def __init__(self,parent,controller):
         CreateSettingFile()
+        
         tk.Frame.__init__(self,parent)
+        self.parent=parent
+        StartPage.configure(self,bg='gray')
         label=tk.Label(self,text="Start Page",font=LARGE_FONT)
         
         label.pack(pady=10,padx=10)
         
         button_new=ttk.Button(self, text="Start new recording",
-                          command=lambda: controller.show_frame(LivePlotPage))
+                          command=lambda: controller.show_frame(RecordingPage))
         
         button_new.pack()
         
@@ -101,11 +107,8 @@ class StartPage(tk.Frame):
         button_Setting=ttk.Button(self, text="Settings",
                               command=lambda: PopSettingPage(self))
         button_Setting.pack() 
-        setup_data=PlotStartPage()
-        self.canvas_load = FigureCanvasTkAgg(setup_data[0], self)
-        self.canvas_load.draw()
-        self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-        self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+
+    
         
     def event(self):
         AcqVerSav_threads.stopThreads(AcqVerSav_threads.thread_list)
@@ -114,57 +117,88 @@ class StartPage(tk.Frame):
 
     
 ## Page for the live plot of sensor data#####################################
-class LivePlotPage(tk.Frame):
+class RecordingPage(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
-        label=ttk.Label(self,text="Page 1",font=LARGE_FONT)
+#        label=ttk.Label(self,text="Page 1",font=LARGE_FONT)
+#        
+#        label.pack(pady=10,padx=10)
+#        
+#        button1=ttk.Button(self, text="Back To home",
+#                          command=lambda: controller.show_frame(StartPage))
+#        
+#        button1.pack()
+#        
+#        button2=ttk.Button(self, text="Create/Select save file",
+#                          command=lambda: controller.show_frame(LivePlotPage))
+#        
+#        button2.pack()
+#        
+        self.image = tk.PhotoImage(file='bluetooth.png')
+        self.image_disp=self.image.subsample(6,6)
+        self.label = tk.Label(self, image=self.image_disp, bg='green',borderwidth=2, relief="solid")
+        self.label.grid(row=0,column=0,pady=10)
+        self.comlist=['com1','com2','com3']
         
-        label.pack(pady=10,padx=10)
+        self.v = tk.StringVar()
+        self.v.set(self.comlist[0])
+        self.BluetoothOption = ttk.OptionMenu(self, self.v, self.comlist[0], *self.comlist)
+        self.BluetoothOption.grid(row=0,column=1,pady=10)
+        self.saveLocationText=tk.StringVar()
+        self.saveLocationText.set('File Save Name: ')
+        self.saveLocationLabel=ttk.Label(self,textvariable=self.saveLocationText)
+        self.saveLocationLabel.grid(row=1,column=0,pady=10)
         
-        button1=ttk.Button(self, text="Back To home",
-                          command=lambda: controller.show_frame(StartPage))
+        self.editButton=ttk.Button(self,text='Edit',command=lambda: EditSaveLocation(self))
+        self.editButton.grid(row=1,column=1,pady=10)
         
-        button1.pack()
+        self.startButton=ttk.Button(self,text='Start',command=lambda: StartRecording(self))
+        self.startButton.grid(row=2,column=0,pady=10)
+        self.stopButton=ttk.Button(self,text='Stop',command=lambda: StopRecording(self))
+        self.stopButton.config(state="disabled")
+        self.stopButton.grid(row=2,column=1,pady=10)
         
-        button2=ttk.Button(self, text="Create/Select save file",
-                          command=lambda: controller.show_frame(LivePlotPage))
-        
-        button2.pack()
-        
-        canvas = FigureCanvasTkAgg(fig, self)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-        
-        toolbar = NavigationToolbar2Tk(canvas, self)
-        toolbar.update()
-        canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
+        self.homeButton=ttk.Button(self, text="Home",
+                  command=lambda: controller.show_frame(StartPage))
+        self.homeButton.grid(row=3,columnspan=2,pady=10)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+
+    
     def event(self):
-        newLine="\n"
-        fileNameOk=False
-        
-        while not fileNameOk :   
-            SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
-            for root, dirs, files in os.walk(SettingsDirectory):
-                if 'SettingsFile.txt' in files:
-                    with open("SettingsFile.txt","r") as SettingFile:
-                        SettingData=SettingFile.readlines()
-                        Extensions=SettingData[2][:-1]
-                        if SettingData[0]=="\n":
-                            fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file")
-                            with open("SettingsFile.txt","w+") as SettingFile:
-                                SettingData[0]=os.path.dirname(fileSaveName)+newLine
-                                SettingFile.writelines(SettingData)
-                        else:
-                            fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = SettingData[0] ,title = "Select file2")
-                
-            if fileSaveName and fileSaveName[-4:] in Extensions :
-                    fileNameOk=True
-            else:
-    #                if not messagebox.askokcancel("Invalid file format", "Please enter a valid file name."):
-                break
-        if fileNameOk:
-            AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(fileSaveName, nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
-        pass
+        state = str(self.startButton['state'])
+        if state == 'normal':
+            EditSaveLocation(self)
+def CheckState():
+    state=[np.random.randint(0,2),np.random.randint(0,2)]
+    crise=state[0]
+    connexion=state[1]
+    if crise==1:
+        root.get_page("RecordingPage").label.config(bg='red')
+    else:
+        root.get_page("RecordingPage").label.config(bg='green')
+    if connexion==1:
+       root.get_page("RecordingPage").configure(bg='red')
+    else:
+        root.get_page("RecordingPage").configure(bg='gray')
+    root.after(1000,CheckState)
+def StartRecording(self):
+    if len(self.saveLocationText.get())>16:
+        fileSaveName=self.saveLocationText.get()[16:]
+        AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(fileSaveName, nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
+        self.startButton.config(state='disabled')
+        self.stopButton.config(state='enabled')
+        self.BluetoothOption.config(state='disabled')
+        self.editButton.config(state='disabled')
+    else:
+        messagebox.showwarning("No file name", "Please enter a save file")
+def StopRecording(self):
+    if messagebox.askokcancel("Stop", "Do you want to stop recording?"):
+        AcqVerSav_threads.stopThreads(AcqVerSav_threads.thread_list)
+        self.startButton.config(state='enabled')
+        self.stopButton.config(state='disabled')
+        self.BluetoothOption.config(state='enabled')
+        self.editButton.config(state='enabled')
     
     ########### CREATE SUMMARY#################
     
@@ -245,79 +279,8 @@ def Rapport():
     
     go(file_path)
     
-    
-## Page for the loaded data plot #########################
-        
-#class LoadPlotPage(tk.Frame):
-#    def __init__(self,parent,controller):
-#        n=11
-#        tk.Frame.__init__(self,parent)
-#        label=ttk.Label(self,text="Page 2",font=LARGE_FONT)
-#        
-#        label.pack(pady=10,padx=10)
-#        button1=ttk.Button(self, text="Back To home",
-#                          command=lambda: controller.show_frame(StartPage))
-#        
-#        button1.pack()
-#        
-#        notebook=ttk.Notebook(self)
-#        self.frame=[None]*n
-#        for k in range(n):
-#            self.frame[k]=ttk.Frame(notebook)
-#            TabName=graph.TabName(k)
-#            notebook.add(self.frame[k], text=TabName)
-#        notebook.pack()
-#
-##        label.grid(row=1,column=0)
-#        
-#
-##        button1.grid(row=2,column=0)
-#    
-#        
-#    def event(self):
-#            
-#        if load==True:
-#            MsgBox=tk.messagebox.askquestion("New Data","Do you want to load new data?")
-#            if MsgBox=='yes':
-#                self.canvas_load.get_tk_widget().destroy()
-#                self.slider.destroy()
-#                setup_data=loadDataSetup(self)
-##                toolbar = NavigationToolbar2Tk(self.canvas_load, self)
-##                toolbar.update()    
-#                self.canvas_load = FigureCanvasTkAgg(setup_data[1], self)
-#                self.canvas_load.draw()
-#                self.canvas_load.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-#                self.canvas_load._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-#                self.slider = Scale(self, from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL,length=600, command=lambda x: self.update_ax(setup_data[0],setup_data[1],setup_data[2]))
-#                self.slider.pack()
-#            else:
-#                pass
-#        else:
-#            setup_data=loadDataSetup(self)
-#            self.canvas_load=[None]*setup_data[0].shape[1]
-#            self.slider=[None]*setup_data[0].shape[1]
-#            for k in range(setup_data[0].shape[1]):
-#                self.canvas_load[k] = FigureCanvasTkAgg(setup_data[1], self.frame[k])
-#                self.canvas_load[k].draw()
-#                
-##            toolbar = NavigationToolbar2Tk(self.canvas_load, self)
-##            toolbar.update()
-#                self.canvas_load[k].get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-#                self.canvas_load[k]._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
-##            self.canvas_load.get_tk_widget().grid(row=3,column=0)
-#            
-#                self.slider[k] = Scale(self.frame[k], from_=0, to=setup_data[0].shape[0]-12, orient=tk.HORIZONTAL, length=600, command=lambda k=k: self.update_ax(k))
-#                self.slider[k].pack() 
-##            self.slider.grid(column=0,row=4) 
-#    def update_ax(self,k):
-#        print(k)
-##        ax.set_xlim(pos,pos+1000)
-##        fig_load.canvas_load.draw_idle()
-#            
             
-            
-            
-## Page for the live plot of sensor data#####################################
+## Page for the settings#####################################
 class SettingPage(tk.Frame):
     def __init__(self,parent):
         tk.Frame.__init__(self,parent)
@@ -510,6 +473,36 @@ def DefinePath(self):
     self.top.destroy()
     PopSettingPage(self)
 
+def EditSaveLocation(self):
+    newLine="\n"
+    fileNameOk=False
+    while not fileNameOk :   
+        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+        for root, dirs, files in os.walk(SettingsDirectory):
+            if 'SettingsFile.txt' in files:
+                with open("SettingsFile.txt","r") as SettingFile:
+                    SettingData=SettingFile.readlines()
+                    Extensions=SettingData[2][:-1]
+                    if SettingData[0]=="\n":
+                        fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file")
+                        if not fileSaveName:
+                            pass
+                        else:
+                            with open("SettingsFile.txt","w+") as SettingFile:
+                                SettingData[0]=os.path.dirname(fileSaveName)+newLine
+                                SettingFile.writelines(SettingData)
+                    else:
+                        fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = SettingData[0] ,title = "Select file2")
+                        if not fileSaveName:
+                            break
+        if not fileSaveName:
+            break
+        if fileSaveName and fileSaveName[-4:] in Extensions :
+            fileNameOk=True
+            self.saveLocationText.set('File Save Name: '+fileSaveName)
+        else:
+            messagebox.showerror("Invalid file format", "Please check the extension or add it in the settings page.")
+            break
     
     
     
@@ -587,33 +580,10 @@ def setupP(n,fig,ttd):
     
     return [ax, xs, ys,line,n]
 
-def animate(frameCounter,ax,xs,ys,lines,n):
-
-    for l in range(n):
-        
-        ys[l].popleft()
-        ys[l].append(AcqVerSav_threads.latest_data_point[l])
-        if l==1:
-            if np.mean(ys)>510:
-                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
-        if l==2 or l==3 or l==4 or l==5:
-            if np.mean(ys)>510:
-                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
-        if l==6 or l==7 or l==8 or l==9:
-            if np.mean(ys)>510:
-                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
-        if l==10:
-            if np.mean(ys)>510:
-                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
-        if l==11:
-            if np.mean(ys)>510:
-                tk.messagebox.showwarning("ALERTE", "A Crisi is happening!!")
-
-        lines[l].set_xdata(xs)
-        lines[l].set_ydata(ys[l])
-    return lines
 ######## Save on closing window################3
 
+    
+    
         
 def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
@@ -627,7 +597,6 @@ style.use("ggplot")
 fig = Figure(figsize=(10,7), dpi=100)
 
 load=False
-
 root=PolyleptiqueApp()
 root.protocol("WM_DELETE_WINDOW", on_closing)
 
@@ -642,12 +611,12 @@ nbIntegrityWorkers=1
 qSize = 100000
 
 a=setupP(nbChannel,fig,timeToDisplay*samplingRate)
-ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=1000/samplingRate, blit=True)
+#ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=1000/samplingRate, blit=True)
 
 #gui = Thread(target=gui_t, args=(root,), name="GUI")
 #tStart(gui)
-
-
+CheckState()
 root.mainloop()
 
 
+#    AcqVerSav_threads.state [0 0 ]
