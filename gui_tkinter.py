@@ -273,7 +273,8 @@ def Rapport():
         PatientName=os.path.basename(file_path)[:-4]
         Scan_date=datetime.datetime.fromtimestamp(os.stat(file_path).st_mtime).strftime('%Y_%m_%d')
         SummaryName=GenName+'_'+PatientName+'_'+Scan_date+'.pdf'
-        doc=SimpleDocTemplate(SummaryName)
+        directory = os.path.split(file_path)[0]
+        doc=SimpleDocTemplate(directory+'/'+SummaryName)
         doc.build(Elements)
     [data,file_path]=select_file()
     if file_path==0:
@@ -320,7 +321,6 @@ def Rapport():
             ydata_moyen=np.mean(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1)
             ydata_plus=[x+y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
             ydata_moins=[x-y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
-            print(ydata)
             data_graph = [tuple(zip(xdata,ydata_moyen)),tuple(zip(xdata,ydata_plus)),tuple(zip(xdata,ydata_moins))]
             graph = graphout(data_graph)
             info_capteur=[Capteur, meanData,stdData,maxData,minData,graph]
