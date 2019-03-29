@@ -29,7 +29,8 @@ from tkinter import messagebox
 
 from Save_values import *
 from real_time_plot import *
-import AcqVerSav_threads
+import mainBT
+import scanBT
 import graph
 
 from reportlab.graphics.shapes import Drawing
@@ -46,7 +47,7 @@ from reportlab.graphics.charts.legends import LineLegend
 import time
 import datetime
 starttime=time.time()
-
+test=True
 
 class PolyleptiqueApp(tk.Tk):
     
@@ -111,7 +112,7 @@ class StartPage(tk.Frame):
 
         
     def event(self):
-        AcqVerSav_threads.stopThreads(AcqVerSav_threads.thread_list)
+        mainBT.stopThreads(mainBT.thread_list)
         pass
     
 
@@ -138,7 +139,10 @@ class RecordingPage(tk.Frame):
         self.image_disp=self.image.subsample(6,6)
         self.label = tk.Label(self, image=self.image_disp, bg='green',borderwidth=2, relief="solid")
         self.label.grid(rowspan=2,column=0,pady=10)
-        self.comlist=['1','2','3']
+        if test:
+            self.comlist=[1,2,3]
+        else:
+            self.comlist=scanBT.scanBT()
         
         self.v = tk.StringVar()
         self.v.set(self.comlist[0])
@@ -175,7 +179,7 @@ class RecordingPage(tk.Frame):
         if state == 'normal':
             EditSaveLocation(self)
 def RefreshBluetooth(self):
-    self.comlist=[str(np.random.randint(0,4)),str(np.random.randint(0,4)),str(np.random.randint(0,4))]
+    self.comlist=scanBT.scanBT()#[str(np.random.randint(0,4)),str(np.random.randint(0,4)),str(np.random.randint(0,4))]
     menu = self.BluetoothOption["menu"]
     menu.delete(0, "end")
     for string in self.comlist:
@@ -184,9 +188,10 @@ def RefreshBluetooth(self):
     self.v.set(self.comlist[0])
 
 def CheckState():
-    state=[np.random.randint(0,2),np.random.randint(0,2)]
-    crise=state[0]
-    connexion=state[1]
+#    state=[np.random.randint(0,2),np.random.randint(0,2)]
+#    print(mainBT.c_state)
+    crise=mainBT.c_state[0]
+    connexion=mainBT.c_state[1]
     if crise==1:
         root.get_page("RecordingPage").label.config(bg='red')
     else:
@@ -197,9 +202,11 @@ def CheckState():
         root.get_page("RecordingPage").configure(bg='gray')
     root.after(1000,CheckState)
 def StartRecording(self):
-    if len(self.saveLocationText.get())>16:
+    a=self.saveLocationText.get()
+    print(a)
+    if len(a)>16:
         fileSaveName=self.saveLocationText.get()[16:]
-        AcqVerSav_threads.thread_list = AcqVerSav_threads.initializeThreads(fileSaveName, nbChannel, nbIntegrityWorkers, qSize,saveFrequency*samplingRate)
+        mainBT.thread_list = mainBT.initializeThreads(fileSaveName, nbChannel, qSize,saveFrequency*samplingRate,test)
         self.startButton.config(state='disabled')
         self.stopButton.config(state='enabled')
         self.BluetoothOption.config(state='disabled')
@@ -209,7 +216,7 @@ def StartRecording(self):
         messagebox.showwarning("No file name", "Please enter a save file")
 def StopRecording(self):
     if messagebox.askokcancel("Stop", "Do you want to stop recording?"):
-        AcqVerSav_threads.stopThreads(AcqVerSav_threads.thread_list)
+        mainBT.stopThreads(mainBT.thread_list)
         self.startButton.config(state='enabled')
         self.stopButton.config(state='disabled')
         self.BluetoothOption.config(state='enabled')
@@ -556,7 +563,7 @@ def EditSaveLocation(self):
         
 def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
-        AcqVerSav_threads.stopThreads(AcqVerSav_threads.thread_list)
+        mainBT.stopThreads(mainBT.thread_list)
         root.destroy()   
 
 
@@ -571,12 +578,11 @@ root.protocol("WM_DELETE_WINDOW", on_closing)
 
 
 
-nbChannel=11
+nbChannel=18
 frameCounter = 1
-samplingRate = 1000 #in Hz
+samplingRate = 100 #in Hz
 timeToDisplay = 1 #in s
-saveFrequency = 10 #in seconds
-nbIntegrityWorkers=1
+saveFrequency = 2 #in seconds
 qSize = 100000
 
 #ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=1000/samplingRate, blit=True)
@@ -587,4 +593,4 @@ CheckState()
 root.mainloop()
 
 
-#    AcqVerSav_threads.state [0 0 ]
+#    mainBT.state [0 0 ]
