@@ -94,9 +94,10 @@ class StartPage(tk.Frame):
         tk.Frame.__init__(self,parent)
         self.parent=parent
         StartPage.configure(self,bg='gray')
-        label=tk.Label(self,text="Start Page",font=LARGE_FONT)
-        
-        label.pack(pady=10,padx=10)
+        self.image = tk.PhotoImage(file='logo.png')
+        self.image_disp=self.image.subsample(4,4)
+        self.label = tk.Label(self, image=self.image_disp,borderwidth=2, relief="solid")
+        self.label.pack()
         
         button_new=ttk.Button(self, text="Start new recording",
                           command=lambda: controller.show_frame(RecordingPage))
@@ -115,8 +116,7 @@ class StartPage(tk.Frame):
         mainBT.stopThreads(mainBT.thread_list)
         pass
     
-
-    
+ 
 ## Page for the live plot of sensor data#####################################
 class RecordingPage(tk.Frame):
     def __init__(self,parent,controller):
@@ -152,7 +152,8 @@ class RecordingPage(tk.Frame):
         self.RefreshButton.grid(row=1,column=1,pady=10)
         
         
-        
+        self.saveLocationPath=tk.StringVar()
+        self.saveLocationPath.set('')
         self.saveLocationText=tk.StringVar()
         self.saveLocationText.set('')
         self.saveLocationLabel=ttk.Label(self,textvariable=self.saveLocationText)
@@ -198,14 +199,14 @@ def CheckState():
         root.get_page("RecordingPage").label.config(bg='green')
     if connexion==1:
        root.get_page("RecordingPage").configure(bg='red')
+       root.get_page("RecordingPage").saveLocationLabel.configure(background='red')
     else:
         root.get_page("RecordingPage").configure(bg='gray')
+        root.get_page("RecordingPage").saveLocationLabel.configure(background='gray')
     root.after(1000,CheckState)
 def StartRecording(self):
-    a=self.saveLocationText.get()
-    print(a)
-    if len(a)>16:
-        fileSaveName=self.saveLocationText.get()[16:]
+    if len(self.saveLocationPath.get())>4:
+        fileSaveName=self.saveLocationPath.get()
         mainBT.thread_list = mainBT.initializeThreads(fileSaveName, nbChannel, qSize,saveFrequency*samplingRate,test)
         self.startButton.config(state='disabled')
         self.stopButton.config(state='enabled')
@@ -555,6 +556,7 @@ def EditSaveLocation(self):
         if fileSaveName and fileSaveName[-4:] in Extensions :
             fileNameOk=True
             self.saveLocationText.set(os.path.basename(fileSaveName)[:-4])
+            self.saveLocationPath.set(fileSaveName)
             
         else:
             messagebox.showerror("Invalid file format", "Please check the extension or add it in the settings page.")
