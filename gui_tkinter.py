@@ -495,7 +495,7 @@ def CreateSettingFile():
             if not SettingData[0]:
                 optionList = ['.bin','.dat', '.csv', '.mat', '.xls']
                 with open("SettingsFile.txt","w+") as SettingFile:
-                    SettingData=[SettingData[0]+newLine,".dat\n",optionList[0]+optionList[1]+optionList[2]+newLine]
+                    SettingData=[SettingData[0]+newLine,".bin\n",optionList[0]+optionList[1]+optionList[2]+newLine]
                     SettingFile.writelines(SettingData)
         
 def DefinePath(self):
