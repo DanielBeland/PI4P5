@@ -180,7 +180,7 @@ def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
 def check(state):
     return [0, state[-2],state[-1]]
 
-def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test,ext):
+def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test,ext='bin'):
     
     select_file_lock=Lock()
     select_file_lock.acquire(blocking=True)
