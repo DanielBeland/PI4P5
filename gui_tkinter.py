@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 16 14:42:00 2019
-
-@author: Olivier
-"""
 import random
 import serial
 import sys
@@ -27,11 +21,8 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from Save_values import *
-from real_time_plot import *
 import mainBT
 import scanBT
-import graph
 
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.charts.linecharts import HorizontalLineChart
@@ -46,6 +37,7 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.graphics.charts.legends import LineLegend
 import time
 import datetime
+
 starttime=time.time()
 test=False
 
