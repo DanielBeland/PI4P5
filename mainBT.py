@@ -36,15 +36,26 @@ def stopThreads(threads):
         th.join()
     threads=[]
     
-def writeF(val,filename):
-    with open(filename, mode='ab') as file:
-        binary_format = bytearray(val)
-        file.write(binary_format)
+def writeF(val,filename,ext):
+    if 'bin' in ext:
+        with open(filename, mode='ab') as file:
+            binary_format = bytearray(val)
+            file.write(binary_format)
+    elif 'csv' in ext:
+        with open(filename, mode='a',newline='') as data:
+            data_writer = csv.writer(data, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            for i in range(val.shape[0]):
+                data_writer.writerow(val[i,:])
         
-def setupF(filename,nbChannel):
-    with open(filename, mode='wb') as file:
-        binary_format = bytearray(np.arange(nbChannel)+1)
-        file.write(binary_format)
+def setupF(filename,nbChannel,ext):
+    if 'bin' in ext:
+        with open(filename, mode='wb') as file:
+            binary_format = bytearray(np.arange(nbChannel)+1) #+1 to shift from 0 to 1
+            file.write(binary_format)
+    elif 'csv' in ext:
+        with open(filename, mode='w',newline='') as data:
+            data_writer = csv.writer(data, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            data_writer.writerow(np.arange(nbChannel)+1)
     
 def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock,test):
     wrongCounter=0
@@ -120,9 +131,9 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
         except NameError as e:
             print(e)
     
-def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock):
+def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock,ext):
     t = current_thread()
-    setupF(fileSaveName,nbChannel+2)
+    setupF(fileSaveName,nbChannel+2,ext)
     data=[]
     select_file_lock.release()
     while not t.shutdown_flag.is_set():
@@ -134,13 +145,13 @@ def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock
             for i in range(curr_size):
                 data[i] = q_save.get()
                 q_save.task_done()
-            writeF(data,fileSaveName)
+            writeF(data,fileSaveName,ext)
     curr_size = q_save.qsize()
     data=np.zeros((curr_size,nbChannel+2), dtype=int)
     for i in range(curr_size):
         data[i] = q_save.get()
         q_save.task_done()
-    writeF(data,fileSaveName)
+    writeF(data,fileSaveName,ext)
     print('WRITER TERMINATED')
 
     
@@ -169,7 +180,7 @@ def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
 def check(state):
     return [0, state[-2],state[-1]]
 
-def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test):
+def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test,ext):
     
     select_file_lock=Lock()
     select_file_lock.acquire(blocking=True)
@@ -186,17 +197,17 @@ def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test):
     t_acq.start()
     thread_list.append(t_acq)
     
-    t_save = StopableThread(target=worker_write_to_file, args=(q_save,nbChannel,saveSize,fileSaveName,select_file_lock), name="Writer")
-    t_save.start()
-    thread_list.append(t_save)
-    
     t_check = StopableThread(target=worker_check, args=(q_check,q_save,nbChannel,select_file_lock,connection_lock,), name="State-Checker")
     t_check.start()
     thread_list.append(t_check)
+    
+    t_save = StopableThread(target=worker_write_to_file, args=(q_save,nbChannel,saveSize,fileSaveName,select_file_lock,ext,), name="Writer")
+    t_save.start()
+    thread_list.append(t_save)
     
     return thread_list
 
 if __name__ == '__main__':
     nbChannel = 18
     #input = 18 variables, 2 sont ajoutés, 19 : bool si l'entrée est pas du bon format, 20 : bool si le BT est déconecté
-    initializeThreads(nbChannel,300000,1000,'ex1.bin',True)
+    initializeThreads(nbChannel,300000,1000,'ex1.bin',True,'bin')
