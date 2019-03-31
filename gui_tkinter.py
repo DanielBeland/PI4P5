@@ -47,7 +47,7 @@ from reportlab.graphics.charts.legends import LineLegend
 import time
 import datetime
 starttime=time.time()
-test=True
+test=False
 
 class PolyleptiqueApp(tk.Tk):
     
@@ -121,19 +121,6 @@ class StartPage(tk.Frame):
 class RecordingPage(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
-#        label=ttk.Label(self,text="Page 1",font=LARGE_FONT)
-#        
-#        label.pack(pady=10,padx=10)
-#        
-#        button1=ttk.Button(self, text="Back To home",
-#                          command=lambda: controller.show_frame(StartPage))
-#        
-#        button1.pack()
-#        
-#        button2=ttk.Button(self, text="Create/Select save file",
-#                          command=lambda: controller.show_frame(LivePlotPage))
-#        
-#        button2.pack()
 #        
         self.image = tk.PhotoImage(file='bluetooth.png')
         self.image_disp=self.image.subsample(6,6)
@@ -146,7 +133,8 @@ class RecordingPage(tk.Frame):
         
         self.v = tk.StringVar()
         self.v.set(self.comlist[0])
-        self.BluetoothOption = ttk.OptionMenu(self, self.v, self.comlist[0], *self.comlist)
+        self.BluetoothOption = ttk.OptionMenu(self, self.v, self.comlist[0], *self.comlist,command=self.setPort)
+        mainBT.sPort=self.comlist[0]
         self.BluetoothOption.grid(row=0,column=1,pady=10)
         self.RefreshButton=ttk.Button(self,text='refresh', command=lambda: RefreshBluetooth(self))
         self.RefreshButton.grid(row=1,column=1,pady=10)
@@ -173,7 +161,8 @@ class RecordingPage(tk.Frame):
         self.homeButton.grid(row=4,columnspan=2,pady=10)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-
+    def setPort(self,value):
+        mainBT.sPort=value[0:4]
     
     def event(self):
         state = str(self.startButton['state'])

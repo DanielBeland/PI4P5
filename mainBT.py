@@ -7,7 +7,7 @@ import threading
 from queue import Queue, Empty, Full
 #connected=scanBT()
 #print(connected)
-
+sPort=[]
 c_state=[0,0,0]
 thread_list = []
 
@@ -63,8 +63,8 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
     t = current_thread()
     ser = serial.Serial()
     ser.baudrate = 115200
-    ser.timeout = 0.05
-    port='COM3' #str(connected[1][-5:-1])
+    ser.timeout = 0.1
+    port=sPort[0:4] #str(connected[1][-5:-1])
     ser.port = port
     if select_file_lock.acquire():
         select_file_lock.release()
@@ -166,7 +166,7 @@ def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
                 print('CHECK STARTED')
                 while not t.shutdown_flag.is_set():
                     try:
-                        new=q_check.get(block=True, timeout=0.03)
+                        new=q_check.get(block=True, timeout=0.13)
                         q_check.task_done()
                     except Empty:
                         print("EMPTY")
@@ -180,7 +180,7 @@ def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
 def check(state):
     return [0, state[-2],state[-1]]
 
-def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test,ext='bin'):
+def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test):
     
     select_file_lock=Lock()
     select_file_lock.acquire(blocking=True)
@@ -201,7 +201,7 @@ def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test,ext='bin'):
     t_check.start()
     thread_list.append(t_check)
     
-    t_save = StopableThread(target=worker_write_to_file, args=(q_save,nbChannel,saveSize,fileSaveName,select_file_lock,ext,), name="Writer")
+    t_save = StopableThread(target=worker_write_to_file, args=(q_save,nbChannel,saveSize,fileSaveName,select_file_lock,fileSaveName[-4:],), name="Writer")
     t_save.start()
     thread_list.append(t_save)
     
@@ -210,4 +210,4 @@ def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test,ext='bin'):
 if __name__ == '__main__':
     nbChannel = 18
     #input = 18 variables, 2 sont ajoutés, 19 : bool si l'entrée est pas du bon format, 20 : bool si le BT est déconecté
-    initializeThreads(nbChannel,300000,1000,'ex1.bin',True,'bin')
+    initializeThreads('ex1.bin',nbChannel,300000,1000,False)
