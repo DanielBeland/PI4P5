@@ -217,7 +217,7 @@ def Rapport():
     HeaderStyle=styles["Heading1"]
     CapteurStyle=styles["Heading2"]
     ParaStyle=styles["Normal"]
-    capteur=["ECG","EMG bras droite","EMG bras gauche","EMG jambe droite","EMG jambe gauche","Accéléromètre bras droite","Accéléromètre bras gauche","Accéléromètre jambe droite","Accéléromètre jambe gauche","Respiration","EDA"]
+    capteur=["EMG bras droite","EMG bras gauche","EMG jambe droite","EMG jambe gauche","Accéléromètre bras droite x","Accéléromètre bras droite y","Accéléromètre bras droite z","Accéléromètre bras gauche x","Accéléromètre bras gauche y","Accéléromètre bras gauche z","Accéléromètre jambe droite x","Accéléromètre jambe droite y","Accéléromètre jambe gauche x","Accéléromètre jambe gauche y","EDA","Rythme cardiaque","Rythme respiratoir","déconnection du haut","Erreur de connextion","Erreur de connexion bluetooth"]
     def header(txt, style=HeaderStyle, klass=Paragraph, sep=0.3):
         s=Spacer(0.2*inch, sep*inch)
         para=klass(txt,style)
@@ -254,8 +254,21 @@ def Rapport():
         if not file_path:
             return [0,0]
         else:
-            data = np.genfromtxt(file_path, delimiter=',')
-            return [data, file_path]
+            if file_path[-3:]=='csv':
+                data = np.genfromtxt(file_path, delimiter=',')
+                return [data, file_path]
+            elif file_path[-3:]=='bin':
+                with open(file_path, mode='rb') as file:
+                    fileContent = file.read()
+                    matrice=np.asarray([], dtype=np.int8)
+                    for numbers in range(int(len(fileContent)/4)):
+                        c=int.from_bytes(fileContent[numbers*4:(numbers+1)*4],byteorder='little')
+                        matrice=np.append([matrice],c)
+                    data=matrice.reshape(int(len(matrice)/nbChannel),nbChannel)
+                return [data,file_path]
+                                    
+            else:
+                messagebox.showerror("Invalid file format", "Please select a valide file with extension .csv or .bin")
     
     def go(file_path):
         GenName='Rapport'
@@ -356,12 +369,12 @@ class SettingPage(tk.Frame):
         self.ExtensionOptions.grid(row=4,column=1,pady=10)
         
         
-        self.addExtensionButton=ttk.Button(top,text="Add extension", command = self.AddExtension)
-        self.addExtensionButton.grid(row=5,column=0,pady=10)
-        
-        self.RemoveExtensionButton=ttk.Button(top,text="Remove extension", command=self.RemoveExtension)
-        self.RemoveExtensionButton.grid(row=5,column=1,pady=10)
-        
+#        self.addExtensionButton=ttk.Button(top,text="Add extension", command = self.AddExtension)
+#        self.addExtensionButton.grid(row=5,column=0,pady=10)
+#        
+#        self.RemoveExtensionButton=ttk.Button(top,text="Remove extension", command=self.RemoveExtension)
+#        self.RemoveExtensionButton.grid(row=5,column=1,pady=10)
+#        
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         
@@ -389,17 +402,17 @@ class SettingPage(tk.Frame):
                     with open("SettingsFile.txt","w") as SettingFile:
                         SettingFile.writelines(SettingData)
                 
-    def AddExtension(self):
-        self.w=AddExtensionWindow(self.parent) 
-        self.master.wait_window(self.w.top)
-        self.top.destroy()
-        PopSettingPage(self)
-    def RemoveExtension(self):
-        self.w=RemoveExtensionWindow(self.parent) 
-        self.master.wait_window(self.w.top)
-        self.DefineExtension
-        self.top.destroy()
-        PopSettingPage(self)
+#    def AddExtension(self):
+#        self.w=AddExtensionWindow(self.parent) 
+#        self.master.wait_window(self.w.top)
+#        self.top.destroy()
+#        PopSettingPage(self)
+#    def RemoveExtension(self):
+#        self.w=RemoveExtensionWindow(self.parent) 
+#        self.master.wait_window(self.w.top)
+#        self.DefineExtension
+#        self.top.destroy()
+#        PopSettingPage(self)
     def ExitSetting(self):
         self.top.destroy()
                     
@@ -412,69 +425,69 @@ def PopSettingPage(self):
     
     
     
-class AddExtensionWindow(object):
-    def __init__(self, parent):
-        top=self.top=tk.Toplevel(parent)
-        self.l=ttk.Label(top,text="Add extension of form: .aaa")
-        self.l.pack()
-        self.e=tk.Entry(top)
-        self.e.pack()
-        self.b=ttk.Button(top,text='Ok',command=self.cleanup)
-        self.b.pack()
-    def cleanup(self):
-        newLine="\n"
-        self.value=self.e.get()
-        if self.value[0]!=".":
-            tk.messagebox.showwarning("Extension Error","Invalide Extension, add ""."" in front of extension name")
-        else:
-            SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
-            for root, dirs, files in os.walk(SettingsDirectory):
-                if 'SettingsFile.txt' in files:
-                    with open("SettingsFile.txt","r") as SettingFile:
-                        SettingData=SettingFile.readlines()
-            SettingData[2]=SettingData[2][:-1]+self.value+newLine
-            with open("SettingsFile.txt","w") as SettingFile:
-                SettingFile.writelines(SettingData)
-        self.top.destroy()
-class RemoveExtensionWindow(object):
-    def __init__(self, parent):
-        top=self.top=tk.Toplevel(parent)
-        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
-        for root, dirs, files in os.walk(SettingsDirectory):
-            if 'SettingsFile.txt' in files:
-                with open("SettingsFile.txt","r") as SettingFile:
-                    SettingData=SettingFile.readlines()
-        
-        d = "."
-        optionListTemp =  [d+e for e in SettingData[2].split(d)]
-        optionListTemp[len(optionListTemp)-1]=optionListTemp[len(optionListTemp)-1][:-1]
-        self.optionList=optionListTemp[1:len(optionListTemp)]
-
-
-        self.l=[None]*len(self.optionList)
-        self.b=[]
-        for k in range(len(self.optionList)):
-            self.b.append(ttk.Button(top,text='Delete extension '+self.optionList[k],command=lambda k=k: self.DeleteExten(k)))
-            self.b[k].grid()
-    def DeleteExten(self,k):
-        newLine="\n"
-
-        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
-        for root, dirs, files in os.walk(SettingsDirectory):
-            if 'SettingsFile.txt' in files:
-                with open("SettingsFile.txt","r") as SettingFile:
-                    SettingData=SettingFile.readlines()
-        
-        for x in range(len(self.optionList)):
-            if self.optionList[x]==self.optionList[k]:
-                self.optionList[x]=""
-        SettingData[2]=''
-        for i in range(len(self.optionList)):
-            SettingData[2]=SettingData[2]+self.optionList[i]
-        SettingData[2]=SettingData[2]+newLine
-        with open("SettingsFile.txt","w") as SettingFile:
-            SettingFile.writelines(SettingData)
-        self.top.destroy()
+#class AddExtensionWindow(object):
+#    def __init__(self, parent):
+#        top=self.top=tk.Toplevel(parent)
+#        self.l=ttk.Label(top,text="Add extension of form: .aaa")
+#        self.l.pack()
+#        self.e=tk.Entry(top)
+#        self.e.pack()
+#        self.b=ttk.Button(top,text='Ok',command=self.cleanup)
+#        self.b.pack()
+#    def cleanup(self):
+#        newLine="\n"
+#        self.value=self.e.get()
+#        if self.value[0]!=".":
+#            tk.messagebox.showwarning("Extension Error","Invalide Extension, add ""."" in front of extension name")
+#        else:
+#            SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+#            for root, dirs, files in os.walk(SettingsDirectory):
+#                if 'SettingsFile.txt' in files:
+#                    with open("SettingsFile.txt","r") as SettingFile:
+#                        SettingData=SettingFile.readlines()
+#            SettingData[2]=SettingData[2][:-1]+self.value+newLine
+#            with open("SettingsFile.txt","w") as SettingFile:
+#                SettingFile.writelines(SettingData)
+#        self.top.destroy()
+#class RemoveExtensionWindow(object):
+#    def __init__(self, parent):
+#        top=self.top=tk.Toplevel(parent)
+#        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+#        for root, dirs, files in os.walk(SettingsDirectory):
+#            if 'SettingsFile.txt' in files:
+#                with open("SettingsFile.txt","r") as SettingFile:
+#                    SettingData=SettingFile.readlines()
+#        
+#        d = "."
+#        optionListTemp =  [d+e for e in SettingData[2].split(d)]
+#        optionListTemp[len(optionListTemp)-1]=optionListTemp[len(optionListTemp)-1][:-1]
+#        self.optionList=optionListTemp[1:len(optionListTemp)]
+#
+#
+#        self.l=[None]*len(self.optionList)
+#        self.b=[]
+#        for k in range(len(self.optionList)):
+#            self.b.append(ttk.Button(top,text='Delete extension '+self.optionList[k],command=lambda k=k: self.DeleteExten(k)))
+#            self.b[k].grid()
+#    def DeleteExten(self,k):
+#        newLine="\n"
+#
+#        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
+#        for root, dirs, files in os.walk(SettingsDirectory):
+#            if 'SettingsFile.txt' in files:
+#                with open("SettingsFile.txt","r") as SettingFile:
+#                    SettingData=SettingFile.readlines()
+#        
+#        for x in range(len(self.optionList)):
+#            if self.optionList[x]==self.optionList[k]:
+#                self.optionList[x]=""
+#        SettingData[2]=''
+#        for i in range(len(self.optionList)):
+#            SettingData[2]=SettingData[2]+self.optionList[i]
+#        SettingData[2]=SettingData[2]+newLine
+#        with open("SettingsFile.txt","w") as SettingFile:
+#            SettingFile.writelines(SettingData)
+#        self.top.destroy()
 
 def CreateSettingFile():
     SettingData=[""]
@@ -485,7 +498,7 @@ def CreateSettingFile():
                 with open("SettingsFile.txt","r") as SettingFile:
                     SettingData=SettingFile.readlines()
             if not SettingData[0]:
-                optionList = ['.bin','.dat', '.csv', '.mat', '.xls']
+                optionList = ['.bin', '.csv']
                 with open("SettingsFile.txt","w+") as SettingFile:
                     SettingData=[SettingData[0]+newLine,".bin\n",optionList[0]+optionList[1]+optionList[2]+newLine]
                     SettingFile.writelines(SettingData)
@@ -561,7 +574,7 @@ root.protocol("WM_DELETE_WINDOW", on_closing)
 
 
 
-nbChannel=18
+nbChannel=20
 frameCounter = 1
 samplingRate = 100 #in Hz
 timeToDisplay = 1 #in s
