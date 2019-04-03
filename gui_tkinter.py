@@ -39,7 +39,7 @@ import time
 import datetime
 
 starttime=time.time()
-test=False
+test=True
 
 class PolyleptiqueApp(tk.Tk):
     
@@ -181,7 +181,7 @@ def CheckState():
         root.get_page("RecordingPage").label.config(bg='red')
     else:
         root.get_page("RecordingPage").label.config(bg='green')
-    if crise:
+    if crise==1:
        root.get_page("RecordingPage").configure(bg='red')
        root.get_page("RecordingPage").saveLocationLabel.configure(background='red')
     else:
@@ -197,6 +197,7 @@ def StartRecording(self):
         self.BluetoothOption.config(state='disabled')
         self.editButton.config(state='disabled')
         self.homeButton.config(state='disabled')
+        self.RefreshButton.config(state='disabled')
     else:
         messagebox.showwarning("No file name", "Please enter a save file")
 def StopRecording(self):
@@ -207,6 +208,7 @@ def StopRecording(self):
         self.BluetoothOption.config(state='enabled')
         self.editButton.config(state='enabled')
         self.homeButton.config(state='enabled')
+        self.RefreshButton.config(state='enabled')
     
     ########### CREATE SUMMARY#################
     
@@ -220,7 +222,9 @@ def Rapport():
     HeaderStyle=styles["Heading1"]
     CapteurStyle=styles["Heading2"]
     ParaStyle=styles["Normal"]
-    capteur=["EMG bras droite","EMG bras gauche","EMG jambe droite","EMG jambe gauche","Accéléromètre bras droite x","Accéléromètre bras droite y","Accéléromètre bras droite z","Accéléromètre bras gauche x","Accéléromètre bras gauche y","Accéléromètre bras gauche z","Accéléromètre jambe droite x","Accéléromètre jambe droite y","Accéléromètre jambe gauche x","Accéléromètre jambe gauche y","EDA","Rythme cardiaque","Rythme respiratoir","déconnection du haut","Erreur de connextion","Erreur de connexion bluetooth"]
+#    capteur=["EMG bras droite","EMG bras gauche","EMG jambe droite","EMG jambe gauche","Accéléromètre bras droite x","Accéléromètre bras droite y","Accéléromètre bras droite z","Accéléromètre bras gauche x","Accéléromètre bras gauche y","Accéléromètre bras gauche z","Accéléromètre jambe droite x","Accéléromètre jambe droite y","Accéléromètre jambe gauche x","Accéléromètre jambe gauche y","EDA","Rythme cardiaque","Rythme respiratoir","déconnection du haut","Erreur de connection","Erreur de connexion bluetooth"]
+    capteur=["EMG bras droite","EMG bras gauche","EMG jambe droite","EMG jambe gauche","Accéléromètre bras droite x","Accéléromètre bras droite y","Accéléromètre bras droite z","Accéléromètre bras gauche x","Accéléromètre bras gauche y","Accéléromètre bras gauche z","Accéléromètre jambe droite x","Accéléromètre jambe droite y","Accéléromètre jambe gauche x","Accéléromètre jambe gauche y","EDA","Rythme respiratoir","déconnection du haut","Erreur de connection"]
+
     def header(txt, style=HeaderStyle, klass=Paragraph, sep=0.3):
         s=Spacer(0.2*inch, sep*inch)
         para=klass(txt,style)
@@ -242,6 +246,13 @@ def Rapport():
         lp.lines[1].strokeWidth=0.5
         lp.lines[2].strokeWidth=0.5
         lp.xValueAxis.labelTextFormat = '%2.1f'
+#        lp.xValueAxis.valueSteps=[]
+        def formatter(val):
+            xTime=time.asctime( time.localtime(val) )
+            return (xTime)
+#        
+#        # Use the formatter
+        lp.xValueAxis.labelTextFormat = formatter
         
 
     #    lp.yValueAxis.valueMin = 0
@@ -267,8 +278,16 @@ def Rapport():
                     for numbers in range(int(len(fileContent)/4)):
                         c=int.from_bytes(fileContent[numbers*4:(numbers+1)*4],byteorder='little')
                         matrice=np.append([matrice],c)
-                    data=matrice.reshape(int(len(matrice)/nbChannel),nbChannel)
-                return [data,file_path]
+                    data=matrice[:-2].reshape(int(len(matrice)/(nbChannel+2)),nbChannel+2)
+                    LenDataEmg=len(data)-1
+                    data_emg1=np.reshape(data[1:,list(range(0, 21,4))],(6*LenDataEmg,1))
+                    data_emg2=np.reshape(data[1:,list(range(1, 22,4))],(6*LenDataEmg,1))
+                    data_emg3=np.reshape(data[1:,list(range(2, 23,4))],(6*LenDataEmg,1))
+                    data_emg4=np.reshape(data[1:,list(range(3, 24,4))],(6*LenDataEmg,1))
+                    data=data[1:,list(range(24, nbChannel+2))]
+                    RecTime=matrice[-2:]
+                    
+                return [data_emg1,data_emg2,data_emg3,data_emg4,data,file_path,RecTime]
                                     
             else:
                 messagebox.showerror("Invalid file format", "Please select a valide file with extension .csv or .bin")
@@ -281,7 +300,7 @@ def Rapport():
         directory = os.path.split(file_path)[0]
         doc=SimpleDocTemplate(directory+'/'+SummaryName)
         doc.build(Elements)
-    [data,file_path]=select_file()
+    [data_emg1,data_emg2,data_emg3,data_emg4,data,file_path,RecTime]=select_file()
     if file_path==0:
         pass
     else:
@@ -308,27 +327,49 @@ def Rapport():
         
         Elements.append(PageBreak())
 
- 
-        for i in range(nbChannel):
+     ## -18 car +2 pour les channels booleen, mais -20 pour les colonnes de trop de l'emg
+        for i in range(nbChannel-18):
             Capteur=header(capteur[i], sep=0.1, style=CapteurStyle)
-            meanData=header('Mean='+str(np.mean(data[1:data.shape[0],i])), sep=0.1, style=ParaStyle)
-            stdData=header('Standard Deviation='+str(np.std(data[1:data.shape[0],i])), sep=0.1, style=ParaStyle)
-            minData=header('Minimum='+str(np.min(data[1:data.shape[0],i])), sep=0.1, style=ParaStyle)
-            maxData=header('Maximum='+str(np.max(data[1:data.shape[0],i])), sep=0.1, style=ParaStyle)
             ydata=[]
             xdata=[]
             data_graph=[]
-#        
-#                
-            xdata=np.arange(data.shape[0]-1)
-            ydata=data[1:data.shape[0],i]
-            N=int(np.floor(len(ydata)//100))
-            ydata_moyen=np.mean(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1)
-            ydata_plus=[x+y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
-            ydata_moins=[x-y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
-            data_graph = [tuple(zip(xdata,ydata_moyen)),tuple(zip(xdata,ydata_plus)),tuple(zip(xdata,ydata_moins))]
-            graph = graphout(data_graph)
-            info_capteur=[Capteur, meanData,stdData,maxData,minData,graph]
+            if i==0:
+                
+                ydata=data_emg1[0:data_emg1.shape[0],0]
+            elif i==1:
+                ydata=data_emg2[0:data_emg2.shape[0],0]
+            elif i==2:
+                ydata=data_emg3[0:data_emg3.shape[0],0]
+            elif i==3:
+                ydata=data_emg4[0:data_emg4.shape[0],0]
+            else:
+                ydata=data[0:data.shape[0],i-4]
+        
+            if np.max(ydata)==1:
+                xdata=np.arange(RecTime[0], RecTime[1],(RecTime[1]-RecTime[0])/len(ydata))
+                PourcentConn=header('Pourcentage de connection='+str((len(ydata)-sum(ydata))/len(ydata)), sep=0.1, style=ParaStyle)
+                data_graph = [tuple(zip(xdata,ydata))]
+                N=int(len(ydata))
+
+                graph = graphout(data_graph,RecTime,N)
+                info_capteur=[Capteur, PourcentConn,graph]
+            else:
+        
+                meanData=header('Mean='+str(np.mean(ydata)), sep=0.1, style=ParaStyle)
+                stdData=header('Standard Deviation='+str(np.std(ydata)), sep=0.1, style=ParaStyle)
+                minData=header('Minimum='+str(np.min(ydata)), sep=0.1, style=ParaStyle)
+                maxData=header('Maximum='+str(np.max(ydata)), sep=0.1, style=ParaStyle)
+            
+            
+            
+                N=int(np.floor(len(ydata)//100))
+                ydata_moyen=np.mean(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1)
+                xdata=np.arange(RecTime[0], RecTime[1],(RecTime[1]-RecTime[0])/len(ydata_moyen))
+                ydata_plus=[x+y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
+                ydata_moins=[x-y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
+                data_graph = [tuple(zip(xdata,ydata_moyen)),tuple(zip(xdata,ydata_plus)),tuple(zip(xdata,ydata_moins))]
+                graph = graphout(data_graph,RecTime,N)
+                info_capteur=[Capteur, meanData,stdData,maxData,minData,graph]
             Elements.extend(info_capteur)
         go(file_path)
     
@@ -503,7 +544,7 @@ def CreateSettingFile():
             if not SettingData[0]:
                 optionList = ['.bin', '.csv']
                 with open("SettingsFile.txt","w+") as SettingFile:
-                    SettingData=[SettingData[0]+newLine,".bin\n",optionList[0]+optionList[1]+optionList[2]+newLine]
+                    SettingData=[SettingData[0]+newLine,".bin\n",optionList[0]+optionList[1]+newLine]
                     SettingFile.writelines(SettingData)
         
 def DefinePath(self):
