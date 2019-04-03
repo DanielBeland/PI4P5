@@ -1,4 +1,5 @@
 from scanBT import *
+from datetime import datetime
 from struct import *
 import serial
 import numpy as np
@@ -61,11 +62,16 @@ def setupF(filename,nbChannel,ext):
 def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock,test):
     wrongCounter=0
     disC=0
+    time1=0
+    time2=datetime.now()
     t = current_thread()
     ser = serial.Serial()
     ser.baudrate = 115200
     ser.timeout = 0.03
-    port=sPort[0:4] #str(connected[1][-5:-1])
+    if test:
+        port='COM3'
+    else :
+        port=sPort[0:4] #str(connected[1][-5:-1])
     ser.port = port
     if select_file_lock.acquire():
         select_file_lock.release()
@@ -96,12 +102,25 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                         dataRead=ser.read_until()
                         dataRaw=unpack('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',dataRead)
                     except :
+                        print(len(dataRead))
                         if len(dataRead)==0:
-                            print('wo')
+                            pass
+#                            time1=datetime.now()
+#                            if (time1-time2).seconds<5:
+#                                disC+=1
+#                                time2=time1
+#                                if disC > 5:
+#                                    disC=0
+#                                    print('Disconnected')
+#                                    ser.close()
+#                                    print('Trying to reconnect')
+#                                    break
+#                            else :
+#                                disC=1
                         else:
                             
 #                            wrongCounter+=1
-                            print("WRONG COUNTERRRRRRRRRRR")
+#                            print("WRONG COUNTERRRRRRRRRRR")
         #                    print(wrongCounter)
                             dataRaw=np.zeros((nbChannel+1), dtype=int)
                             data[-2]=1
@@ -149,7 +168,7 @@ def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock
     while not t.shutdown_flag.is_set():
         time.sleep(1)
         curr_size = q_save.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
-        print(curr_size)
+#        print(curr_size)
         if curr_size > saveSize:
             data=np.zeros((curr_size,nbChannel+2), dtype=int)
             for i in range(curr_size):
