@@ -39,7 +39,7 @@ import time
 import datetime
 
 starttime=time.time()
-test=False
+test=True
 
 class PolyleptiqueApp(tk.Tk):
     

@@ -79,7 +79,7 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
             if test:
                 connection_lock.release()
                 while not t.shutdown_flag.is_set():
-                    data=np.append(np.random.randint(1,1000,size=18), [np.random.randint(0,2,size=2)])
+                    data=np.append(np.random.randint(1,1000,size=36), [np.random.randint(0,2,size=2)])
                     q_save.put(data)
                     q_check.put(data)
                     time.sleep(0.01)
