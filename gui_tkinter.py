@@ -173,18 +173,21 @@ def CheckState():
 #    state=[np.random.randint(0,2),np.random.randint(0,2)]
 #    print(mainBT.c_state)
     crise=mainBT.c_state[0]
-    connexion=mainBT.c_state[1]
-    if crise==1:
+    connexion1=mainBT.c_state[1]
+    connexion2=mainBT.c_state[2]
+    if connexion1:
+        root.get_page("RecordingPage").label.config(bg='orange')
+    elif connexion2:
         root.get_page("RecordingPage").label.config(bg='red')
     else:
         root.get_page("RecordingPage").label.config(bg='green')
-    if connexion==1:
+    if crise:
        root.get_page("RecordingPage").configure(bg='red')
        root.get_page("RecordingPage").saveLocationLabel.configure(background='red')
     else:
         root.get_page("RecordingPage").configure(bg='gray')
         root.get_page("RecordingPage").saveLocationLabel.configure(background='gray')
-    root.after(1000,CheckState)
+    root.after(500,CheckState)
 def StartRecording(self):
     if len(self.saveLocationPath.get())>4:
         fileSaveName=self.saveLocationPath.get()
