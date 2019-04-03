@@ -63,7 +63,7 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
     wrongCounter=0
     disC=0
     time1=0
-    time2=datetime.now()
+    time2=0
     t = current_thread()
     ser = serial.Serial()
     ser.baudrate = 115200
@@ -98,23 +98,31 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                 while not t.shutdown_flag.is_set() :
                     data=np.zeros((nbChannel+2), dtype=int)
                     dataRaw=np.zeros((nbChannel+1), dtype=int)
+                    dataR=ser.read_until()
                     try:
-                        dataRead=ser.read_until()
-                        dataRaw=unpack('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',dataRead)
-                    except :
-                        print(len(dataRead))
-                        if len(dataRead)==0:
+#                        dataRead=ser.read_until()
+                        dataRaw=unpack('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',dataR)
+                    except Exception as e:
+#                        print(e)
+#                        time.sleep(10)
+                        if len(dataR)==0:
+                            print('Problem')
+#                            dataRaw=np.zeros((nbChannel+1), dtype=int)
                             pass
-#                            time1=datetime.now()
-#                            if (time1-time2).seconds<5:
+                            time1=int(round(datetime.now().timestamp() * 1000))
+                            if (time1-time2)>3000:
+                                disC=1
+                                time2=time1
+                            else:
+                                disC+=1
 #                                disC+=1
 #                                time2=time1
-#                                if disC > 5:
-#                                    disC=0
-#                                    print('Disconnected')
-#                                    ser.close()
-#                                    print('Trying to reconnect')
-#                                    break
+                                if disC > 10:
+                                    disC=0
+                                    print('Disconnected')
+                                    ser.close()
+                                    print('Trying to reconnect')
+                                    break
 #                            else :
 #                                disC=1
                         else:
@@ -122,7 +130,7 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
 #                            wrongCounter+=1
 #                            print("WRONG COUNTERRRRRRRRRRR")
         #                    print(wrongCounter)
-                            dataRaw=np.zeros((nbChannel+1), dtype=int)
+#                            dataRaw=np.zeros((nbChannel+1), dtype=int)
                             data[-2]=1
                     
                     
@@ -168,7 +176,7 @@ def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock
     while not t.shutdown_flag.is_set():
         time.sleep(1)
         curr_size = q_save.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
-#        print(curr_size)
+        print(curr_size)
         if curr_size > saveSize:
             data=np.zeros((curr_size,nbChannel+2), dtype=int)
             for i in range(curr_size):
@@ -198,7 +206,7 @@ def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
                         new=q_check.get(block=True, timeout=0.035)
                         q_check.task_done()
                     except Empty:
-                        print("EMPTY")
+#                        print("EMPTY")
                         new=np.zeros((nbChannel+2), dtype=int)
                         new[-1]=1
                         q_save.put(new)
