@@ -574,12 +574,12 @@ root.protocol("WM_DELETE_WINDOW", on_closing)
 
 
 
-nbChannel=20
+nbChannel=36
 frameCounter = 1
 samplingRate = 100 #in Hz
 timeToDisplay = 1 #in s
-saveFrequency = 2 #in seconds
-qSize = 100000
+saveFrequency = 300 #in seconds
+qSize = samplingRate*saveFrequency*100
 
 #ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=1000/samplingRate, blit=True)
 

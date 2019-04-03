@@ -1,4 +1,5 @@
 from scanBT import *
+from struct import *
 import serial
 import numpy as np
 import time
@@ -63,7 +64,7 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
     t = current_thread()
     ser = serial.Serial()
     ser.baudrate = 115200
-    ser.timeout = 0.1
+    ser.timeout = 0.03
     port=sPort[0:4] #str(connected[1][-5:-1])
     ser.port = port
     if select_file_lock.acquire():
@@ -86,41 +87,50 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                         connection_lock.release()
                         break
                     except Exception as e:
-                        if 'PermissionError' in e.args[0]:
-                            print('port occupé, the fuck')
-                        elif 'OSError' in e.args[0]:
-                            print('Device cannot be found, verify it is turned one or select another one.')
-                        elif 'FileNotFoundError' in e.args[0]:
-                            print('This port is empty, select another one')
                         print(e)
                         time.sleep(1)
                 while not t.shutdown_flag.is_set() :
                     data=np.zeros((nbChannel+2), dtype=int)
-                    dataRaw=ser.read_until().split(b',')
+                    dataRaw=np.zeros((nbChannel+1), dtype=int)
+                    try:
+                        dataRead=ser.read_until()
+                        dataRaw=unpack('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',dataRead)
+                    except :
+                        if len(dataRead)==0:
+                            print('wo')
+                        else:
+                            
+#                            wrongCounter+=1
+                            print("WRONG COUNTERRRRRRRRRRR")
+        #                    print(wrongCounter)
+                            dataRaw=np.zeros((nbChannel+1), dtype=int)
+                            data[-2]=1
                     
                     
     #                print(dataRaw)
                 #    print(len(dataRaw))
-                    if not len(dataRaw)==nbChannel+1:
-                        if len(dataRaw)==1 and len(dataRaw[0])==0 and dataRaw[0]==b'':
-                            disC+=1
-    #                        print(disC)
-                            if disC > 5:
-                                #TODO : Add timer instead of disc counter
-                                disC=0
-                                print('Disconnected')
-                                ser.close()
-                                print('Trying to reconnect')
-                                break
-                        else:
-                            wrongCounter+=1
-                            print("WRONG COUNTERRRRRRRRRRR")
-        #                    print(wrongCounter)
-                            dataRaw=np.zeros((nbChannel), dtype=int)
-                            data[-2]=1
-                    else:
-                        disC=0
-                    data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
+#                    if not len(dataRaw)==nbChannel+1:
+#                        if len(dataRaw)==1 and len(dataRaw[0])==0 and dataRaw[0]==b'':
+#                            disC+=1
+#    #                        print(disC)
+#                            if disC > 5:
+#                                #TODO : Add timer instead of disc counter
+#                                disC=0
+#                                print('Disconnected')
+#                                ser.close()
+#                                print('Trying to reconnect')
+#                                break
+#                        else:
+#                            wrongCounter+=1
+#                            print("WRONG COUNTERRRRRRRRRRR")
+#        #                    print(wrongCounter)
+#                            dataRaw=np.zeros((nbChannel), dtype=int)
+#                            data[-2]=1
+#                    else:
+#                        disC=0
+#                    data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
+                    
+                    data[0:-2]=dataRaw[0:-1]
         #            print(data)
                     q_save.put(data)
                     q_check.put(data)
@@ -166,7 +176,7 @@ def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
                 print('CHECK STARTED')
                 while not t.shutdown_flag.is_set():
                     try:
-                        new=q_check.get(block=True, timeout=0.13)
+                        new=q_check.get(block=True, timeout=0.035)
                         q_check.task_done()
                     except Empty:
                         print("EMPTY")
@@ -207,7 +217,7 @@ def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test):
     
     return thread_list
 
-if __name__ == '__main__':
-    nbChannel = 18
-    #input = 18 variables, 2 sont ajoutés, 19 : bool si l'entrée est pas du bon format, 20 : bool si le BT est déconecté
-    initializeThreads('ex1.bin',nbChannel,300000,1000,False)
+#if __name__ == '__main__':
+#    nbChannel = 18
+#    #input = 18 variables, 2 sont ajoutés, 19 : bool si l'entrée est pas du bon format, 20 : bool si le BT est déconecté
+#    initializeThreads('ex1.bin',nbChannel,300000,1000,False)
