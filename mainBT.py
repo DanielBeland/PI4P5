@@ -1,5 +1,6 @@
 from scanBT import *
 from datetime import datetime
+from collections import deque
 from struct import *
 import serial
 import numpy as np
@@ -7,6 +8,7 @@ import time
 from threading import Thread, Lock, current_thread
 import threading
 from queue import Queue, Empty, Full
+from stateCheck import check
 #connected=scanBT()
 #print(connected)
 sPort=[]
@@ -67,7 +69,7 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
     t = current_thread()
     ser = serial.Serial()
     ser.baudrate = 115200
-    ser.timeout = 0.03
+    ser.timeout = 0.02
     if test:
         port='COM3'
     else :
@@ -82,7 +84,7 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                     data=np.append(np.random.randint(1,1000,size=36), [np.random.randint(0,2,size=2)])
                     q_save.put(data)
                     q_check.put(data)
-                    time.sleep(0.01)
+                    time.sleep(0.005)
             else :
                 while not t.shutdown_flag.is_set():
                     try:
@@ -104,10 +106,10 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                         dataRaw=unpack('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',dataR)
                     except Exception as e:
 #                        print(e)
+                        data[-2]=1
 #                        time.sleep(10)
                         if len(dataR)==0:
-                            print('Problem')
-#                            dataRaw=np.zeros((nbChannel+1), dtype=int)
+#                            print('Problem')
                             pass
                             time1=int(round(datetime.now().timestamp() * 1000))
                             if (time1-time2)>3000:
@@ -117,51 +119,31 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                                 disC+=1
 #                                disC+=1
 #                                time2=time1
-                                if disC > 10:
+                                if disC > 15:
                                     disC=0
                                     print('Disconnected')
                                     ser.close()
+                                    connection_lock.acquire()
                                     print('Trying to reconnect')
                                     break
 #                            else :
 #                                disC=1
                         else:
+                            pass
                             
 #                            wrongCounter+=1
 #                            print("WRONG COUNTERRRRRRRRRRR")
         #                    print(wrongCounter)
 #                            dataRaw=np.zeros((nbChannel+1), dtype=int)
-                            data[-2]=1
-                    
-                    
-    #                print(dataRaw)
-                #    print(len(dataRaw))
-#                    if not len(dataRaw)==nbChannel+1:
-#                        if len(dataRaw)==1 and len(dataRaw[0])==0 and dataRaw[0]==b'':
-#                            disC+=1
-#    #                        print(disC)
-#                            if disC > 5:
-#                                #TODO : Add timer instead of disc counter
-#                                disC=0
-#                                print('Disconnected')
-#                                ser.close()
-#                                print('Trying to reconnect')
-#                                break
-#                        else:
-#                            wrongCounter+=1
-#                            print("WRONG COUNTERRRRRRRRRRR")
-#        #                    print(wrongCounter)
-#                            dataRaw=np.zeros((nbChannel), dtype=int)
 #                            data[-2]=1
-#                    else:
-#                        disC=0
-#                    data[0:len(dataRaw)-1] = list(map(np.int32, dataRaw[0:len(dataRaw)-1]))
+                    
+                    
                     
                     data[0:-2]=dataRaw[0:-1]
         #            print(data)
                     q_save.put(data)
                     q_check.put(data)
-        print("Acq thread terminated")
+        print("ACQUISITION TERMINATED")
         
         try:
             ser.close()
@@ -176,7 +158,7 @@ def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock
     while not t.shutdown_flag.is_set():
         time.sleep(1)
         curr_size = q_save.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
-        print(curr_size)
+#        print(curr_size)
         if curr_size > saveSize:
             data=np.zeros((curr_size,nbChannel+2), dtype=int)
             for i in range(curr_size):
@@ -195,6 +177,9 @@ def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock
 def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
     global c_state
     t = current_thread()
+    state1 = deque()
+    state2=deque()
+    state3=deque()
     while not t.shutdown_flag.is_set():
         if select_file_lock.acquire():
             select_file_lock.release()
@@ -202,20 +187,31 @@ def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
                 connection_lock.release()
                 print('CHECK STARTED')
                 while not t.shutdown_flag.is_set():
-                    try:
-                        new=q_check.get(block=True, timeout=0.035)
-                        q_check.task_done()
-                    except Empty:
-#                        print("EMPTY")
-                        new=np.zeros((nbChannel+2), dtype=int)
-                        new[-1]=1
-                        q_save.put(new)
-                    c_state=check(new)
+                    if connection_lock.acquire(blocking=False):
+                        connection_lock.release()
+                        try:
+                            new=q_check.get(block=True, timeout=0.0105)
+                            q_check.task_done()
+                            c_state=check(new,state1,state2,state3)
+                        except Empty:
+    #                        print("EMPTY")
+                            pass
+                    else:
+#                        print('dc')
+                        try:
+                            new=q_check.get(block=True, timeout=0.01)
+                            q_check.task_done()
+                        except Empty:
+    #                        print("EMPTY")
+                            new=np.zeros((nbChannel+2), dtype=int)
+                            new[-1]=1
+                            q_save.put(new)
+                        c_state=check(new,state1,state2,state3)
+                        
+                    
+                    
     c_state=[0,0,0]
     print('CHECKER TERMINATED')
-
-def check(state):
-    return [0, state[-2],state[-1]]
 
 def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test):
     
