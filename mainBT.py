@@ -155,6 +155,7 @@ def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock
     setupF(fileSaveName,nbChannel+2,ext)
     data=[]
     select_file_lock.release()
+    timeStart=int(time.time())
     while not t.shutdown_flag.is_set():
         time.sleep(1)
         curr_size = q_save.qsize() # doc says qsize is unreliable but no one else get's from this queue so it should not be that bad
@@ -171,6 +172,7 @@ def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock
         data[i] = q_save.get()
         q_save.task_done()
     writeF(data,fileSaveName,ext)
+    writeF(np.asarray([timeStart,int(time.time())]),fileSaveName,ext)
     print('WRITER TERMINATED')
 
     
