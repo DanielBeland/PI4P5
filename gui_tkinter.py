@@ -77,7 +77,7 @@ class PolyleptiqueApp(tk.Tk):
     def get_page(self, page_name):
         return self.frames[page_name]
         
-## Starting page, openend when app is launched################################3
+## Starting page, openend when app is launched################################
 class StartPage(tk.Frame):
     
     def __init__(self,parent,controller):
@@ -91,12 +91,12 @@ class StartPage(tk.Frame):
         self.label = tk.Label(self, image=self.image_disp,borderwidth=2, relief="solid")
         self.label.pack()
         
-        button_new=ttk.Button(self, text="Start New Recording",
+        button_new=ttk.Button(self, text="Start new recording",
                           command=lambda: controller.show_frame(RecordingPage))
         
         button_new.pack()
         
-        button_load=ttk.Button(self, text="Generate Report From Record",
+        button_load=ttk.Button(self, text="Generate recording report",
                               command=lambda: Rapport())
         button_load.pack() 
         button_Setting=ttk.Button(self, text="Settings",
@@ -161,7 +161,7 @@ class RecordingPage(tk.Frame):
         if state == 'normal':
             EditSaveLocation(self)
 def RefreshBluetooth(self):
-    self.comlist=scanBT.scanBT()#[str(np.random.randint(0,4)),str(np.random.randint(0,4)),str(np.random.randint(0,4))]
+    self.comlist=scanBT.scanBT()
     menu = self.BluetoothOption["menu"]
     menu.delete(0, "end")
     for string in self.comlist:
@@ -170,8 +170,6 @@ def RefreshBluetooth(self):
     self.v.set(self.comlist[0])
 
 def CheckState():
-#    state=[np.random.randint(0,2),np.random.randint(0,2)]
-#    print(mainBT.c_state)
     crise=mainBT.c_state[0]
     connexion1=mainBT.c_state[1]
     connexion2=mainBT.c_state[2]
@@ -255,9 +253,6 @@ def Rapport():
         lp.xValueAxis.labelTextFormat = formatter
         
 
-    #    lp.yValueAxis.valueMin = 0
-    #    lp.yValueAxis.valueMax = 1
-    #    lp.yValueAxis.valueSteps = [1, 2, 3, 5, 6]
         drawing.add(lp)
         return drawing
     def select_file():
@@ -368,7 +363,7 @@ def Rapport():
                 ydata_plus=[x+y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
                 ydata_moins=[x-y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
                 data_graph = [tuple(zip(xdata,ydata_moyen)),tuple(zip(xdata,ydata_plus)),tuple(zip(xdata,ydata_moins))]
-                graph = graphout(data_graph,RecTime,N)
+                graph = graphout(data_graph)
                 info_capteur=[Capteur, meanData,stdData,maxData,minData,graph]
             Elements.extend(info_capteur)
         go(file_path)
@@ -422,7 +417,7 @@ class SettingPage(tk.Frame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         
-        self.okButton=ttk.Button(top,text="Ok", command=self.ExitSetting)
+        self.okButton=ttk.Button(top,text="OK", command=self.ExitSetting)
         self.okButton.grid(columnspan=2, pady=10)
         
         
@@ -578,7 +573,7 @@ def EditSaveLocation(self):
                     SettingData=SettingFile.readlines()
                     Extensions=SettingData[2][:-1]
                     if SettingData[0]=="\n":
-                        fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) ,title = "Select file")
+                        fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
                         if not fileSaveName:
                             pass
                         else:
@@ -586,7 +581,7 @@ def EditSaveLocation(self):
                                 SettingData[0]=os.path.dirname(fileSaveName)+newLine
                                 SettingFile.writelines(SettingData)
                     else:
-                        fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = SettingData[0] ,title = "Select file2")
+                        fileSaveName=filedialog.asksaveasfilename(defaultextension=SettingData[1][:-1], initialdir = SettingData[0])
                         if not fileSaveName:
                             break
         if not fileSaveName:
@@ -619,7 +614,6 @@ root.protocol("WM_DELETE_WINDOW", on_closing)
 
 
 nbChannel=36
-frameCounter = 1
 samplingRate = 100 #in Hz
 saveFrequency = 300 #in seconds
 qSize = samplingRate*saveFrequency*100
