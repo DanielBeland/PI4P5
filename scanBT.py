@@ -31,8 +31,3 @@ else:
             comport_list = "No device found"
         return comport_list
             
-        
-if __name__ == '__main__':
-    a=scanBT()
-    #print("%(com)s : %(type)s" %{'com': a[0][-5:-1], 'type':a[0][:-7]})
-    print(a)

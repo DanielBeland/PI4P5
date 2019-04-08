@@ -39,7 +39,7 @@ import time
 import datetime
 
 starttime=time.time()
-test=True
+test=False
 
 class PolyleptiqueApp(tk.Tk):
     
@@ -91,12 +91,12 @@ class StartPage(tk.Frame):
         self.label = tk.Label(self, image=self.image_disp,borderwidth=2, relief="solid")
         self.label.pack()
         
-        button_new=ttk.Button(self, text="Start new recording",
+        button_new=ttk.Button(self, text="Start New Recording",
                           command=lambda: controller.show_frame(RecordingPage))
         
         button_new.pack()
         
-        button_load=ttk.Button(self, text="Create Summary",
+        button_load=ttk.Button(self, text="Generate Report From Record",
                               command=lambda: Rapport())
         button_load.pack() 
         button_Setting=ttk.Button(self, text="Settings",
@@ -128,7 +128,7 @@ class RecordingPage(tk.Frame):
         self.BluetoothOption = ttk.OptionMenu(self, self.v, self.comlist[0], *self.comlist,command=self.setPort)
         mainBT.sPort=self.comlist[0]
         self.BluetoothOption.grid(row=0,column=1,pady=10)
-        self.RefreshButton=ttk.Button(self,text='refresh', command=lambda: RefreshBluetooth(self))
+        self.RefreshButton=ttk.Button(self,text='Refresh', command=lambda: RefreshBluetooth(self))
         self.RefreshButton.grid(row=1,column=1,pady=10)
         
         
@@ -621,16 +621,8 @@ root.protocol("WM_DELETE_WINDOW", on_closing)
 nbChannel=36
 frameCounter = 1
 samplingRate = 100 #in Hz
-timeToDisplay = 1 #in s
 saveFrequency = 300 #in seconds
 qSize = samplingRate*saveFrequency*100
 
-#ani=animation.FuncAnimation(fig, animate, frames=frameCounter, fargs=(a[0],a[1],a[2],a[3],a[4]), interval=1000/samplingRate, blit=True)
-
-#gui = Thread(target=gui_t, args=(root,), name="GUI")
-#tStart(gui)
 CheckState()
 root.mainloop()
-
-
-#    mainBT.state [0 0 ]

@@ -9,30 +9,22 @@ from threading import Thread, Lock, current_thread
 import threading
 from queue import Queue, Empty, Full
 from stateCheck import check
-#connected=scanBT()
-#print(connected)
+
 sPort=[]
 c_state=[0,0,0]
 thread_list = []
+
 
 class StopableThread(threading.Thread):
  
     def __init__(self, level=None, *args, **kwargs):
         super(StopableThread, self).__init__(*args, **kwargs)
- 
-        # The shutdown_flag is a threading.Event object that
-        # indicates whether the thread should be terminated.
         self.shutdown_flag = threading.Event()
- 
-        # ... Other thread setup code here ...
- 
+        
     def run(self):
-        print('Thread #%s started' % self.ident)
- 
+        print('Thread #%s started' % self.name)
         self._target(*self._args, **self._kwargs)
- 
-        # ... Clean shutdown code here ...
-        print('Thread #%s stopped' % self.ident)
+        print('Thread #%s stopped' % self.name)
              
 def stopThreads(threads):
     for th in reversed(threads):
@@ -73,8 +65,9 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
     if test:
         port='COM3'
     else :
-        port=sPort[0:4] #str(connected[1][-5:-1])
+        port=sPort[0:4]
     ser.port = port
+    print(port)
     if select_file_lock.acquire():
         select_file_lock.release()
         while not t.shutdown_flag.is_set():
@@ -88,7 +81,6 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
             else :
                 while not t.shutdown_flag.is_set():
                     try:
-            #TODO : enregistrer le temps de connexion
                         ser.open()
                         print('Connected')
                         connection_lock.acquire(blocking=False)
@@ -102,14 +94,11 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                     dataRaw=np.zeros((nbChannel+1), dtype=int)
                     dataR=ser.read_until()
                     try:
-#                        dataRead=ser.read_until()
                         dataRaw=unpack('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',dataR)
                     except Exception as e:
 #                        print(e)
                         data[-2]=1
-#                        time.sleep(10)
                         if len(dataR)==0:
-#                            print('Problem')
                             pass
                             time1=int(round(datetime.now().timestamp() * 1000))
                             if (time1-time2)>3000:
@@ -117,8 +106,7 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                                 time2=time1
                             else:
                                 disC+=1
-#                                disC+=1
-#                                time2=time1
+                                print((disC))
                                 if disC > 15:
                                     disC=0
                                     print('Disconnected')
@@ -126,8 +114,6 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                                     connection_lock.acquire()
                                     print('Trying to reconnect')
                                     break
-#                            else :
-#                                disC=1
                         else:
                             pass
                             
@@ -140,10 +126,8 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                     
                     
                     data[0:-2]=dataRaw[0:-1]
-        #            print(data)
                     q_save.put(data)
                     q_check.put(data)
-        print("ACQUISITION TERMINATED")
         
         try:
             ser.close()
@@ -173,7 +157,6 @@ def worker_write_to_file(q_save,nbChannel,saveSize,fileSaveName,select_file_lock
         q_save.task_done()
     writeF(data,fileSaveName,ext)
     writeF(np.asarray([timeStart,int(time.time())]),fileSaveName,ext)
-    print('WRITER TERMINATED')
 
     
 def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
@@ -189,31 +172,32 @@ def worker_check(q_check,q_save,nbChannel,select_file_lock,connection_lock):
                 connection_lock.release()
                 print('CHECK STARTED')
                 while not t.shutdown_flag.is_set():
+#                    Si la connexion Bluetooth est établie
                     if connection_lock.acquire(blocking=False):
                         connection_lock.release()
+#                        Vérifier l'état de connexion et de crise
                         try:
                             new=q_check.get(block=True, timeout=0.0105)
                             q_check.task_done()
                             c_state=check(new,state1,state2,state3)
                         except Empty:
-    #                        print("EMPTY")
                             pass
+#                    Si le Bluetooth est déconnecté
                     else:
-#                        print('dc')
                         try:
+#                            Regarder à une fréquence égale à la fréquence d'échantillonage si une nouvelle donnée est arrivée
                             new=q_check.get(block=True, timeout=0.01)
                             q_check.task_done()
+#                            Si non, envoyer un point de donnée vide à q_save
                         except Empty:
-    #                        print("EMPTY")
                             new=np.zeros((nbChannel+2), dtype=int)
                             new[-1]=1
                             q_save.put(new)
                         c_state=check(new,state1,state2,state3)
                         
                     
-                    
+#    Réinitialiser la variable d'état lors de la fermeture                
     c_state=[0,0,0]
-    print('CHECKER TERMINATED')
 
 def initializeThreads(fileSaveName,nbChannel,qSize,saveSize,test):
     
