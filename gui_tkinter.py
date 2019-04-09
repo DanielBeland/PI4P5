@@ -161,7 +161,7 @@ class RecordingPage(tk.Frame):
         if state == 'normal':
             EditSaveLocation(self)
 def RefreshBluetooth(self):
-    self.comlist=scanBT.scanBT()
+    self.comlist=scanBT.scanBT()#[str(np.random.randint(0,4)),str(np.random.randint(0,4)),str(np.random.randint(0,4))]
     menu = self.BluetoothOption["menu"]
     menu.delete(0, "end")
     for string in self.comlist:
@@ -170,6 +170,8 @@ def RefreshBluetooth(self):
     self.v.set(self.comlist[0])
 
 def CheckState():
+#    state=[np.random.randint(0,2),np.random.randint(0,2)]
+#    print(mainBT.c_state)
     crise=mainBT.c_state[0]
     connexion1=mainBT.c_state[1]
     connexion2=mainBT.c_state[2]
@@ -253,6 +255,9 @@ def Rapport():
         lp.xValueAxis.labelTextFormat = formatter
         
 
+    #    lp.yValueAxis.valueMin = 0
+    #    lp.yValueAxis.valueMax = 1
+    #    lp.yValueAxis.valueSteps = [1, 2, 3, 5, 6]
         drawing.add(lp)
         return drawing
     def select_file():
@@ -346,7 +351,7 @@ def Rapport():
                 data_graph = [tuple(zip(xdata,ydata))]
                 N=int(len(ydata))
 
-                graph = graphout(data_graph,RecTime,N)
+                graph = graphout(data_graph)
                 info_capteur=[Capteur, PourcentConn,graph]
             else:
         
@@ -613,7 +618,8 @@ root.protocol("WM_DELETE_WINDOW", on_closing)
 
 
 
-nbChannel=36
+nbChannel=37
+frameCounter = 1
 samplingRate = 100 #in Hz
 saveFrequency = 300 #in seconds
 qSize = samplingRate*saveFrequency*100

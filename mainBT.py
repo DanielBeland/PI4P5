@@ -94,7 +94,7 @@ def worker_acquisition(q_save,q_check,nbChannel,select_file_lock,connection_lock
                     dataRaw=np.zeros((nbChannel+1), dtype=int)
                     dataR=ser.read_until()
                     try:
-                        dataRaw=unpack('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',dataR)
+                        dataRaw=unpack('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',dataR)
                     except Exception as e:
 #                        print(e)
                         data[-2]=1
