@@ -55,7 +55,7 @@ class PolyleptiqueApp(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
 
         self.frames= {}
-        
+#   Défini le nombre de page ainsi que leur nom
         for F in (StartPage, RecordingPage):
         
             frame = F(container, self)
@@ -67,19 +67,19 @@ class PolyleptiqueApp(tk.Tk):
         self.show_frame(StartPage)
         page_name = RecordingPage.__name__
         self.frames[page_name] = frame
-        
+#        Permet de naviguer entre les differentes pages
     def show_frame(self, cont):
             
         frame=self.frames[cont]
         frame.tkraise()
         frame.event()
-    
+#    Permet d'obtenir le nom de la page
     def get_page(self, page_name):
         return self.frames[page_name]
         
 ## Starting page, openend when app is launched################################
 class StartPage(tk.Frame):
-    
+#    Initialise l'allure de la page
     def __init__(self,parent,controller):
         CreateSettingFile()
         
@@ -103,7 +103,7 @@ class StartPage(tk.Frame):
                               command=lambda: PopSettingPage(self))
         button_Setting.pack() 
 
-        
+#        Ce qui se passe quand on arrive sur la page
     def event(self):
         mainBT.stopThreads(mainBT.thread_list)
         pass
@@ -160,26 +160,27 @@ class RecordingPage(tk.Frame):
         state = str(self.startButton['state'])
         if state == 'normal':
             EditSaveLocation(self)
+#Fonction pour le boutton refresh des ports bluetooth
 def RefreshBluetooth(self):
-    self.comlist=scanBT.scanBT()#[str(np.random.randint(0,4)),str(np.random.randint(0,4)),str(np.random.randint(0,4))]
+    self.comlist=scanBT.scanBT() #Scan les ports
     menu = self.BluetoothOption["menu"]
     menu.delete(0, "end")
     for string in self.comlist:
         menu.add_command(label=string, 
-                         command=lambda value=string: self.v.set(value))
+                         command=lambda value=string: self.v.set(value))#Viens ajouter les ports a la liste
     self.v.set(self.comlist[0])
 
 def CheckState():
-#    state=[np.random.randint(0,2),np.random.randint(0,2)]
-#    print(mainBT.c_state)
+#Fonction qui vient faire varier l'interface en fonction des soucis qui pourrait arriver
     crise=mainBT.c_state[0]
     connexion1=mainBT.c_state[1]
     connexion2=mainBT.c_state[2]
-    if connexion1:
+    
+    if connexion1: #Montre des troubles de connexion
         root.get_page("RecordingPage").label.config(bg='orange')
-    elif connexion2:
+    elif connexion2: #Montre une perte de connexion
         root.get_page("RecordingPage").label.config(bg='red')
-    else:
+    else: 
         root.get_page("RecordingPage").label.config(bg='green')
     if crise==1:
        root.get_page("RecordingPage").configure(bg='red')
@@ -187,22 +188,25 @@ def CheckState():
     else:
         root.get_page("RecordingPage").configure(bg='gray')
         root.get_page("RecordingPage").saveLocationLabel.configure(background='gray')
-    root.after(500,CheckState)
+    root.after(500,CheckState) #Vient verifier toutes les 500 millisecondes
 def StartRecording(self):
-    if len(self.saveLocationPath.get())>4:
+    if len(self.saveLocationPath.get())>4:#Verifie s'il y a un nom de fichier
         fileSaveName=self.saveLocationPath.get()
+        #Commence l'enregistrement
         mainBT.thread_list = mainBT.initializeThreads(fileSaveName, nbChannel, qSize,saveFrequency*samplingRate,test)
+        #Desactive tous les autres boutons
         self.startButton.config(state='disabled')
         self.stopButton.config(state='enabled')
         self.BluetoothOption.config(state='disabled')
         self.editButton.config(state='disabled')
         self.homeButton.config(state='disabled')
         self.RefreshButton.config(state='disabled')
-    else:
+    else:#S'il n'y a pas de nom de fichier
         messagebox.showwarning("No file name", "Please enter a save file")
 def StopRecording(self):
     if messagebox.askokcancel("Stop", "Do you want to stop recording?"):
-        mainBT.stopThreads(mainBT.thread_list)
+        mainBT.stopThreads(mainBT.thread_list)#Arrete l'enregistrement
+        #Reactivation de tous les boutons
         self.startButton.config(state='enabled')
         self.stopButton.config(state='disabled')
         self.BluetoothOption.config(state='enabled')
@@ -213,6 +217,7 @@ def StopRecording(self):
     ########### CREATE SUMMARY#################
     
 def Rapport():
+    #Mise en place des parametre par defaut et des informations de base
     PAGE_HEIGHT=defaultPageSize[1]
     styles=getSampleStyleSheet()
     Title="<para alignment='center'>Rapport de la session d'enregistrement</para>"
@@ -222,8 +227,7 @@ def Rapport():
     HeaderStyle=styles["Heading1"]
     CapteurStyle=styles["Heading2"]
     ParaStyle=styles["Normal"]
-#    capteur=["EMG bras droite","EMG bras gauche","EMG jambe droite","EMG jambe gauche","Accéléromètre bras droite x","Accéléromètre bras droite y","Accéléromètre bras droite z","Accéléromètre bras gauche x","Accéléromètre bras gauche y","Accéléromètre bras gauche z","Accéléromètre jambe droite x","Accéléromètre jambe droite y","Accéléromètre jambe gauche x","Accéléromètre jambe gauche y","EDA","Rythme cardiaque","Rythme respiratoir","déconnection du haut","Erreur de connection","Erreur de connexion bluetooth"]
-    capteur=["EMG bras droite","EMG bras gauche","EMG jambe droite","EMG jambe gauche","Accéléromètre bras droite x","Accéléromètre bras droite y","Accéléromètre bras droite z","Accéléromètre bras gauche x","Accéléromètre bras gauche y","Accéléromètre bras gauche z","Accéléromètre jambe droite x","Accéléromètre jambe droite y","Accéléromètre jambe gauche x","Accéléromètre jambe gauche y","EDA","Rythme respiratoir","déconnection du haut","Erreur de connection"]
+    capteur=["EMG bras droite","EMG bras gauche","EMG jambe droite","EMG jambe gauche","Accéléromètre bras droite x","Accéléromètre bras droite y","Accéléromètre bras droite z","Accéléromètre bras gauche x","Accéléromètre bras gauche y","Accéléromètre bras gauche z","Accéléromètre jambe droite x","Accéléromètre jambe droite y","Accéléromètre jambe gauche x","Accéléromètre jambe gauche y","Rythme respiratoir","EDA","Rythme cardiaque","Stabilité de la connexion","Déconnexion"]
 
     def header(txt, style=HeaderStyle, klass=Paragraph, sep=0.3):
         s=Spacer(0.2*inch, sep*inch)
@@ -246,18 +250,6 @@ def Rapport():
         lp.lines[1].strokeWidth=0.5
         lp.lines[2].strokeWidth=0.5
         lp.xValueAxis.labelTextFormat = '%2.1f'
-#        lp.xValueAxis.valueSteps=[]
-        def formatter(val):
-            xTime=time.asctime( time.localtime(val) )
-            return (xTime)
-#        
-#        # Use the formatter
-        lp.xValueAxis.labelTextFormat = formatter
-        
-
-    #    lp.yValueAxis.valueMin = 0
-    #    lp.yValueAxis.valueMax = 1
-    #    lp.yValueAxis.valueSteps = [1, 2, 3, 5, 6]
         drawing.add(lp)
         return drawing
     def select_file():
@@ -268,10 +260,7 @@ def Rapport():
         if not file_path:
             return [0,0]
         else:
-            if file_path[-3:]=='csv':
-                data = np.genfromtxt(file_path, delimiter=',')
-                return [data, file_path]
-            elif file_path[-3:]=='bin':
+            if file_path[-3:]=='bin':
                 with open(file_path, mode='rb') as file:
                     fileContent = file.read()
                     matrice=np.asarray([], dtype=np.int8)
@@ -280,19 +269,23 @@ def Rapport():
                         matrice=np.append([matrice],c)
                     data=matrice[:-2].reshape(int(len(matrice)/(nbChannel+2)),nbChannel+2)
                     LenDataEmg=len(data)-1
+                    #Separation des donnees EMG et des autres
                     data_emg1=np.reshape(data[1:,list(range(0, 21,4))],(6*LenDataEmg,1))
                     data_emg2=np.reshape(data[1:,list(range(1, 22,4))],(6*LenDataEmg,1))
                     data_emg3=np.reshape(data[1:,list(range(2, 23,4))],(6*LenDataEmg,1))
                     data_emg4=np.reshape(data[1:,list(range(3, 24,4))],(6*LenDataEmg,1))
+                    #Reste des donnees
                     data=data[1:,list(range(24, nbChannel+2))]
+                    #Heure de l'enregistrement
                     RecTime=matrice[-2:]
                     
                 return [data_emg1,data_emg2,data_emg3,data_emg4,data,file_path,RecTime]
                                     
             else:
-                messagebox.showerror("Invalid file format", "Please select a valide file with extension .csv or .bin")
+                messagebox.showerror("Invalid file format", "Please select a valide file with extension .bin")
     
     def go(file_path):
+        #Nom du rapport de la forme Rapport_NomDuPatient_DateEnregistrement.pdf
         GenName='Rapport'
         PatientName=os.path.basename(file_path)[:-4]
         Scan_date=datetime.datetime.fromtimestamp(os.stat(file_path).st_mtime).strftime('%Y_%m_%d')
@@ -304,6 +297,7 @@ def Rapport():
     if file_path==0:
         pass
     else:
+        #Creation de la page titre
         im = Image(logo, 2*inch, 2*inch)
         Elements.append(im)
         Elements.append(Spacer(2*inch, 2*inch))
@@ -329,12 +323,13 @@ def Rapport():
 
      ## -18 car +2 pour les channels booleen, mais -20 pour les colonnes de trop de l'emg
         for i in range(nbChannel-18):
+
             Capteur=header(capteur[i], sep=0.1, style=CapteurStyle)
             ydata=[]
             xdata=[]
             data_graph=[]
+            #Definition des valeurs en y
             if i==0:
-                
                 ydata=data_emg1[0:data_emg1.shape[0],0]
             elif i==1:
                 ydata=data_emg2[0:data_emg2.shape[0],0]
@@ -344,30 +339,55 @@ def Rapport():
                 ydata=data_emg4[0:data_emg4.shape[0],0]
             else:
                 ydata=data[0:data.shape[0],i-4]
-        
-            if np.max(ydata)==1:
+            #Nombre d'intervalle défini par le facteur de division
+            N=int(np.floor(len(ydata)//100))
+            #Booleen pour la stabilité de la connexion
+            if i==nbChannel-19:
                 xdata=np.arange(RecTime[0], RecTime[1],(RecTime[1]-RecTime[0])/len(ydata))
-                PourcentConn=header('Pourcentage de connection='+str((len(ydata)-sum(ydata))/len(ydata)), sep=0.1, style=ParaStyle)
+                PourcentConn=header('Pourcentage de connection='+str(round((len(ydata)-sum(ydata))/len(ydata),3)), sep=0.1, style=ParaStyle)
                 data_graph = [tuple(zip(xdata,ydata))]
                 N=int(len(ydata))
 
                 graph = graphout(data_graph)
                 info_capteur=[Capteur, PourcentConn,graph]
+            #Booleen pour la deconnexion
+            elif i==nbChannel-20:
+                xdata=np.arange(RecTime[0], RecTime[1],(RecTime[1]-RecTime[0])/len(ydata))
+                PourcentConn=header('Pourcentage de connection='+str(round((len(ydata)-sum(ydata))/len(ydata),3)), sep=0.1, style=ParaStyle)
+                
+                ydata_moyen=1-(np.nanmean(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))
+                data_graph = [tuple(zip(xdata,ydata_moyen))]
+                graph = graphout(data_graph)
+                info_capteur=[Capteur, PourcentConn,graph]
+                
+            #Les autres donnees
             else:
-        
-                meanData=header('Mean='+str(np.mean(ydata)), sep=0.1, style=ParaStyle)
-                stdData=header('Standard Deviation='+str(np.std(ydata)), sep=0.1, style=ParaStyle)
-                minData=header('Minimum='+str(np.min(ydata)), sep=0.1, style=ParaStyle)
-                maxData=header('Maximum='+str(np.max(ydata)), sep=0.1, style=ParaStyle)
+                indexes=np.where(np.array(data[0:data.shape[0],13]) == 1)[0]
+                replacements=float('nan')
+                ydata=list(ydata)
+                #On remplace les 0 qui ont été ajouté par l'instabilité de la connexion par des NaN
+                for index in indexes:
+                    ydata[index] = replacements
+                ydata=np.array(ydata)
+                #Calcul des valeurs statistiques en excluant les NaN
+                meanData=header('Mean='+str(round(np.nanmean(ydata),3)), sep=0.1, style=ParaStyle)
+                stdData=header('Standard Deviation='+str(round(np.nanstd(ydata),3)), sep=0.1, style=ParaStyle)
+                minData=header('Minimum='+str(round(np.nanmin(ydata),3)), sep=0.1, style=ParaStyle)
+                maxData=header('Maximum='+str(round(np.nanmax(ydata),3)), sep=0.1, style=ParaStyle)
             
             
             
-                N=int(np.floor(len(ydata)//100))
-                ydata_moyen=np.mean(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1)
+                #Separation de nos valeurs en differents intervale defini plus haut. La moyenne est prise a chaque fois
+                #Si un interval est composer uniquement de NaN, la valeur 0 est attribuee
+                ydata_moyen=np.nan_to_num(np.nanmean(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))
+                #Definition de l'axe x en fonction du temps de debut et de fin de l'enregistrement
                 xdata=np.arange(RecTime[0], RecTime[1],(RecTime[1]-RecTime[0])/len(ydata_moyen))
-                ydata_plus=[x+y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
-                ydata_moins=[x-y for x,y in zip(ydata_moyen,np.std(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1))]
+                #Courbe statistique de +/- un ecart type
+                ydata_plus=[x+y for x,y in zip(ydata_moyen,np.nan_to_num(np.nanstd(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1)))]
+                ydata_moins=[x-y for x,y in zip(ydata_moyen,np.nan_to_num(np.nanstd(ydata[:(len(ydata)//N)*N].reshape(-1,N), axis=1)))]
+                #Combinaison de toutes les courbes pour les envoyer a la fonction graphique
                 data_graph = [tuple(zip(xdata,ydata_moyen)),tuple(zip(xdata,ydata_plus)),tuple(zip(xdata,ydata_moins))]
+                
                 graph = graphout(data_graph)
                 info_capteur=[Capteur, meanData,stdData,maxData,minData,graph]
             Elements.extend(info_capteur)
@@ -411,13 +431,6 @@ class SettingPage(tk.Frame):
         self.v.set(self.optionList[0])
         self.ExtensionOptions = ttk.OptionMenu(top, self.v, SettingData[1][:-1], *self.optionList,command=self.DefineExtension)
         self.ExtensionOptions.grid(row=4,column=1,pady=10)
-        
-        
-#        self.addExtensionButton=ttk.Button(top,text="Add extension", command = self.AddExtension)
-#        self.addExtensionButton.grid(row=5,column=0,pady=10)
-#        
-#        self.RemoveExtensionButton=ttk.Button(top,text="Remove extension", command=self.RemoveExtension)
-#        self.RemoveExtensionButton.grid(row=5,column=1,pady=10)
 #        
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -434,6 +447,7 @@ class SettingPage(tk.Frame):
                     DefaultPath=SettingFile.readline()
         self.LabelText.set('Path: '+DefaultPath)
         self.labelPathName=ttk.Label(self,textvariable=self.LabelText)
+    #Defini l'extension par defaut et l'ecrit dans le fichier SettingsFile
     def DefineExtension(self,value):
         newLine="\n"
         SettingData=[""]
@@ -445,93 +459,14 @@ class SettingPage(tk.Frame):
                     SettingData[1]=value+newLine
                     with open("SettingsFile.txt","w") as SettingFile:
                         SettingFile.writelines(SettingData)
-                
-#    def AddExtension(self):
-#        self.w=AddExtensionWindow(self.parent) 
-#        self.master.wait_window(self.w.top)
-#        self.top.destroy()
-#        PopSettingPage(self)
-#    def RemoveExtension(self):
-#        self.w=RemoveExtensionWindow(self.parent) 
-#        self.master.wait_window(self.w.top)
-#        self.DefineExtension
-#        self.top.destroy()
-#        PopSettingPage(self)
     def ExitSetting(self):
         self.top.destroy()
                     
-        
-#### Setup Load data plot ################
         
 def PopSettingPage(self):
     self.w=SettingPage(self.master)
     self.master.wait_window(self.w.top)
     
-    
-    
-#class AddExtensionWindow(object):
-#    def __init__(self, parent):
-#        top=self.top=tk.Toplevel(parent)
-#        self.l=ttk.Label(top,text="Add extension of form: .aaa")
-#        self.l.pack()
-#        self.e=tk.Entry(top)
-#        self.e.pack()
-#        self.b=ttk.Button(top,text='Ok',command=self.cleanup)
-#        self.b.pack()
-#    def cleanup(self):
-#        newLine="\n"
-#        self.value=self.e.get()
-#        if self.value[0]!=".":
-#            tk.messagebox.showwarning("Extension Error","Invalide Extension, add ""."" in front of extension name")
-#        else:
-#            SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
-#            for root, dirs, files in os.walk(SettingsDirectory):
-#                if 'SettingsFile.txt' in files:
-#                    with open("SettingsFile.txt","r") as SettingFile:
-#                        SettingData=SettingFile.readlines()
-#            SettingData[2]=SettingData[2][:-1]+self.value+newLine
-#            with open("SettingsFile.txt","w") as SettingFile:
-#                SettingFile.writelines(SettingData)
-#        self.top.destroy()
-#class RemoveExtensionWindow(object):
-#    def __init__(self, parent):
-#        top=self.top=tk.Toplevel(parent)
-#        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
-#        for root, dirs, files in os.walk(SettingsDirectory):
-#            if 'SettingsFile.txt' in files:
-#                with open("SettingsFile.txt","r") as SettingFile:
-#                    SettingData=SettingFile.readlines()
-#        
-#        d = "."
-#        optionListTemp =  [d+e for e in SettingData[2].split(d)]
-#        optionListTemp[len(optionListTemp)-1]=optionListTemp[len(optionListTemp)-1][:-1]
-#        self.optionList=optionListTemp[1:len(optionListTemp)]
-#
-#
-#        self.l=[None]*len(self.optionList)
-#        self.b=[]
-#        for k in range(len(self.optionList)):
-#            self.b.append(ttk.Button(top,text='Delete extension '+self.optionList[k],command=lambda k=k: self.DeleteExten(k)))
-#            self.b[k].grid()
-#    def DeleteExten(self,k):
-#        newLine="\n"
-#
-#        SettingsDirectory=os.path.dirname(os.path.abspath(__file__))
-#        for root, dirs, files in os.walk(SettingsDirectory):
-#            if 'SettingsFile.txt' in files:
-#                with open("SettingsFile.txt","r") as SettingFile:
-#                    SettingData=SettingFile.readlines()
-#        
-#        for x in range(len(self.optionList)):
-#            if self.optionList[x]==self.optionList[k]:
-#                self.optionList[x]=""
-#        SettingData[2]=''
-#        for i in range(len(self.optionList)):
-#            SettingData[2]=SettingData[2]+self.optionList[i]
-#        SettingData[2]=SettingData[2]+newLine
-#        with open("SettingsFile.txt","w") as SettingFile:
-#            SettingFile.writelines(SettingData)
-#        self.top.destroy()
 
 def CreateSettingFile():
     SettingData=[""]
@@ -542,11 +477,12 @@ def CreateSettingFile():
                 with open("SettingsFile.txt","r") as SettingFile:
                     SettingData=SettingFile.readlines()
             if not SettingData[0]:
-                optionList = ['.bin', '.csv']
+                #Deux extensions defini par defaut
+                optionList = ['.bin']
                 with open("SettingsFile.txt","w+") as SettingFile:
-                    SettingData=[SettingData[0]+newLine,".bin\n",optionList[0]+optionList[1]+newLine]
+                    SettingData=[SettingData[0]+newLine,".bin\n",optionList[0]+newLine]
                     SettingFile.writelines(SettingData)
-        
+#Defini le path de sauvegarde par defaut et l'ecrit dans le fichier SettingsFile 
 def DefinePath(self):
     self.savePath=filedialog.askdirectory()
     newLine="\n"
@@ -566,7 +502,7 @@ def DefinePath(self):
             SettingsFile.writelines(SettingData)
     self.top.destroy()
     PopSettingPage(self)
-
+#Defini le fichier de sauvegarde dans le fenetre d'enregistrement
 def EditSaveLocation(self):
     newLine="\n"
     fileNameOk=False
@@ -582,6 +518,7 @@ def EditSaveLocation(self):
                         if not fileSaveName:
                             pass
                         else:
+                            #L'ecrit dans le fichier SettingFile pour que ca devienne le nouveau dossier par defaut
                             with open("SettingsFile.txt","w+") as SettingFile:
                                 SettingData[0]=os.path.dirname(fileSaveName)+newLine
                                 SettingFile.writelines(SettingData)
@@ -591,13 +528,14 @@ def EditSaveLocation(self):
                             break
         if not fileSaveName:
             break
+        #verifie que l'extension est autorisée
         if fileSaveName and fileSaveName[-4:] in Extensions :
             fileNameOk=True
             self.saveLocationText.set(os.path.basename(fileSaveName)[:-4])
             self.saveLocationPath.set(fileSaveName)
             
         else:
-            messagebox.showerror("Invalid file format", "Please check the extension or add it in the settings page.")
+            messagebox.showerror("Invalid file format", "Please check the extension")
             break
     
         
